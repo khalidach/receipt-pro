@@ -1,0 +1,7 @@
+{
+  "name": "Ar-Receipt Pro",
+  "description": "A professional Arabic-supported receipt generator for generating, printing, and exporting A4 receipts as PDF.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
