@@ -73,10 +73,10 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
+    <div className="receipt-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
       <div
         dir="rtl"
-        className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-300 w-full max-w-5xl my-4 sm:my-8 flex flex-col max-h-[95vh] overflow-hidden"
+        className="receipt-modal-container bg-slate-100 rounded-3xl shadow-2xl border border-slate-300 w-full max-w-5xl my-4 sm:my-8 flex flex-col max-h-[95vh] overflow-hidden"
       >
         {/* Top Action Bar (hidden when printing) */}
         <div className="bg-white px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 flex-shrink-0 no-print">
@@ -172,8 +172,8 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
         </div>
 
         {/* Scrollable Document Area */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-200/60 flex items-center justify-center">
-          <div className="w-full max-w-[800px] bg-white rounded-xl shadow-xl overflow-hidden print:m-0 print:p-0 print:shadow-none print:w-full">
+        <div className="receipt-modal-scroll flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-200/60 flex items-center justify-center">
+          <div className="w-full max-w-[800px] bg-white rounded-xl shadow-xl overflow-hidden print:m-0 print:p-0 print:shadow-none print:w-full print:rounded-none">
             <ReceiptDocument
               receipt={receipt}
               company={company}

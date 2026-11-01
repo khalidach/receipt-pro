@@ -6,7 +6,8 @@ declare global {
     electronAPI?: {
       isElectron: boolean;
       print: () => Promise<boolean>;
-      printToPDF: (filename?: string) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>;
+      printToPDF?: (filename?: string) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>;
+      savePDFBuffer?: (base64Data: string, filename?: string) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>;
     };
   }
 }
@@ -24,21 +25,12 @@ export async function printReceipt(): Promise<void> {
 
 /**
  * Exports the receipt element as a crisp, high-resolution A4 PDF with exact RTL shaping and balanced margins
+ * Runs identically in both Browser and Electron
  */
 export async function exportReceiptToPDF(
   elementId: string = 'receipt-print-area',
   filename: string = 'سند_قبض.pdf'
 ): Promise<void> {
-  // If running in Electron, leverage native Chromium printToPDF for 100% crisp vector PDF!
-  if (window.electronAPI?.isElectron) {
-    const res = await window.electronAPI.printToPDF(filename);
-    if (!res.success && !res.canceled) {
-      throw new Error(res.error || 'Failed to export PDF');
-    }
-    return;
-  }
-
-  // Browser Fallback: High-resolution canvas to PDF
   const element = document.getElementById(elementId);
   if (!element) {
     throw new Error(`Element with id "${elementId}" not found`);
@@ -112,5 +104,16 @@ export async function exportReceiptToPDF(
     pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
   }
 
-  pdf.save(filename);
+  // 3. Save PDF
+  if (window.electronAPI?.savePDFBuffer) {
+    // Native Electron Save Dialog with exact high-res PDF data
+    const dataUri = pdf.output('datauristring');
+    const res = await window.electronAPI.savePDFBuffer(dataUri, filename);
+    if (!res.success && !res.canceled) {
+      throw new Error(res.error || 'Failed to save PDF');
+    }
+  } else {
+    // Standard Browser Download
+    pdf.save(filename);
+  }
 }

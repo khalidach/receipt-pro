@@ -1,10 +1,40 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 
 let mainWindow;
 
-function createWindow() {
+/**
+ * Checks if the Vite dev server is responding
+ */
+function checkUrlLive(url) {
+  return new Promise((resolve) => {
+    try {
+      const parsedUrl = new URL(url);
+      const req = http.get(
+        {
+          hostname: parsedUrl.hostname,
+          port: parsedUrl.port,
+          path: '/',
+          timeout: 1000,
+        },
+        (res) => {
+          resolve(res.statusCode < 500);
+        }
+      );
+      req.on('error', () => resolve(false));
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(false);
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -19,22 +49,34 @@ function createWindow() {
     },
   });
 
-  // Load Vite dev server if running, or production build
   const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
   const distPath = path.join(__dirname, '../dist/index.html');
 
-  if (fs.existsSync(distPath) && !process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadFile(distPath);
+  // Check if Vite dev server is currently running
+  const isDevRunning = await checkUrlLive(devServerUrl);
+
+  if (isDevRunning) {
+    console.log(`[Electron] Loading from active dev server: ${devServerUrl}`);
+    await mainWindow.loadURL(devServerUrl);
+  } else if (fs.existsSync(distPath)) {
+    console.log(`[Electron] Loading from built dist: ${distPath}`);
+    await mainWindow.loadFile(distPath);
   } else {
-    mainWindow.loadURL(devServerUrl).catch(() => {
-      // Fallback to dist if dev server not running
-      if (fs.existsSync(distPath)) {
-        mainWindow.loadFile(distPath);
-      }
+    console.log(`[Electron] Falling back to: ${devServerUrl}`);
+    mainWindow.loadURL(devServerUrl).catch((err) => {
+      console.error('[Electron] Failed to load URL:', err);
     });
   }
 
-  // Open external links safely
+  // Toggle DevTools with F12
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+
+  // Open external links safely in system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     require('electron').shell.openExternal(url);
     return { action: 'deny' };
@@ -66,7 +108,31 @@ ipcMain.handle('print-receipt', async () => {
   return true;
 });
 
-// IPC Handler: Print to PDF
+// IPC Handler: Save PDF Buffer (Direct high-res raster / jsPDF output)
+ipcMain.handle('save-pdf-buffer', async (event, { base64Data, filename }) => {
+  if (!mainWindow) return { success: false, error: 'No main window' };
+  try {
+    const base64Content = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+    const buffer = Buffer.from(base64Content, 'base64');
+
+    const { filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'حفظ سند القبض بصيغة PDF',
+      defaultPath: filename || 'سند_قبض.pdf',
+      filters: [{ name: 'PDF Documents', extensions: ['pdf'] }],
+    });
+
+    if (filePath) {
+      fs.writeFileSync(filePath, buffer);
+      return { success: true, filePath };
+    }
+    return { success: false, canceled: true };
+  } catch (error) {
+    console.error('Failed to save PDF buffer:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC Handler: Print to PDF (Vector quality fallback)
 ipcMain.handle('print-to-pdf', async (event, filename) => {
   if (!mainWindow) return false;
   try {

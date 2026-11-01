@@ -2,7 +2,7 @@
   "name": "receipt-pro",
   "version": "1.0.0",
   "description": "سند برو - Ar-Receipt Pro: سند قبض مالي احترافي",
-  "main": "dist-electron/main.js",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
