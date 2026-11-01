@@ -86,7 +86,7 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
 
         {/* Top Center: Company Logo Box */}
         <div className="flex-shrink-0 flex items-center justify-center">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 flex items-center justify-center p-2 overflow-hidden shadow-inner">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center p-2 overflow-hidden shadow-inner">
             {company.logoUrl ? (
               <img
                 src={company.logoUrl}
@@ -126,33 +126,38 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
       <div className="w-full border-b-2 border-slate-800 mb-5 mt-2" />
 
       {/* ================= SECTION 1: RECIPIENT INFO (بيانات المستلم) ================= */}
-      <div className="relative border-2 border-slate-800 rounded-2xl p-5 mb-4 bg-white">
-        {/* Border Title Badge */}
-        <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg">
-          بيانات المستلم
+      <div className="border-2 border-slate-800 rounded-2xl overflow-hidden bg-white mb-4">
+        {/* Header Bar */}
+        <div className="bg-slate-100 border-b-2 border-slate-800 px-4 pt-[2px] pb-[13px] sm:pt-1 sm:pb-3.5 flex items-center justify-between">
+          <span className="font-bold text-slate-900 text-base sm:text-lg font-tajawal">
+            بيانات المستلم
+          </span>
         </div>
 
-        {/* Line 1: وصلنا من السيد / السادة */}
-        <div className="flex items-center gap-3 mb-3.5">
-          <span className="font-bold text-slate-900 text-base sm:text-lg whitespace-nowrap shrink-0">
-            وصلنا من السيد / السادة :
-          </span>
-          <div className="flex-1 border-b-2 border-dotted border-slate-400 pb-1 px-2 min-h-[30px] flex items-center">
-            <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
-              {receipt.clientName || ""}
+        {/* Box Body */}
+        <div className="p-4 sm:p-5 bg-white space-y-4">
+          {/* Line 1: وصلنا من السيد / السادة */}
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-slate-900 text-base sm:text-lg whitespace-nowrap shrink-0 font-tajawal">
+              وصلنا من السيد / السادة :
             </span>
+            <div className="flex-1 border-b-2 border-dotted border-slate-400 px-2 pb-0.5 min-h-[30px] flex items-center">
+              <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
+                {receipt.clientName || ""}
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* Line 2: مبلغ وقدره */}
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-slate-900 text-base sm:text-lg whitespace-nowrap shrink-0">
-            مبلغ وقدره :
-          </span>
-          <div className="flex-1 border-b-2 border-dotted border-slate-400 pb-1 px-2 min-h-[30px] flex items-center">
-            <span className="text-base sm:text-lg font-semibold text-slate-800 leading-normal font-tajawal">
-              {receipt.amountInWords || ""}
+          {/* Line 2: مبلغ وقدره */}
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-slate-900 text-base sm:text-lg whitespace-nowrap shrink-0 font-tajawal">
+              مبلغ وقدره :
             </span>
+            <div className="flex-1 border-b-2 border-dotted border-slate-400 px-2 pb-0.5 min-h-[30px] flex items-center">
+              <span className="text-base sm:text-lg font-semibold text-slate-800 font-tajawal">
+                {receipt.amountInWords || ""}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -161,26 +166,43 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
       {receipt.hasTravelers &&
         receipt.travelers &&
         receipt.travelers.length > 0 && (
-          <div className="relative border-2 border-slate-800 rounded-2xl p-4 mb-4 bg-white">
-            {/* Border Title Badge */}
-            <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
-              <span>بيانات المسافرين</span>
-              <span className="text-xs font-mono font-medium text-slate-500">
-                ({receipt.travelers.length} مسافر)
+          <div className="border-2 border-slate-800 rounded-2xl overflow-hidden bg-white mb-4">
+            <div className="bg-slate-100 border-b-2 border-slate-800 px-4 pt-[2px] pb-[13px] sm:pt-1 sm:pb-3.5 flex items-center justify-between">
+              <span className="font-bold text-slate-900 text-base sm:text-lg font-tajawal">
+                بيانات المسافرين
+              </span>
+              <span className="text-xs font-tajawal font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded-md border border-slate-300 mt-1">
+                {receipt.travelers.length}{" "}
+                {receipt.travelers.length === 1
+                  ? "مسافر"
+                  : receipt.travelers.length === 2
+                    ? "مسافران"
+                    : "مسافرين"}
               </span>
             </div>
 
-            <div className="pt-1.5">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="p-4 bg-white">
+              <div className="flex flex-wrap items-center gap-2.5">
                 {receipt.travelers.map((traveler, idx) => (
                   <div
                     key={idx}
-                    className="inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 text-xs sm:text-sm font-bold shadow-xs"
+                    className="inline-flex items-center gap-2 px-3 pt-1 pb-1.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-sm sm:text-base font-bold shadow-xs"
                   >
-                    <span className="w-4 h-4 rounded-full bg-slate-800 text-white text-[10px] font-mono flex items-center justify-center font-bold">
-                      {idx + 1}
-                    </span>
-                    <span>{traveler}</span>
+                    <svg className="w-5 h-5 shrink-0 mt-1" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="11" fill="#1e293b" />
+                      <text
+                        x="12"
+                        y="16.5"
+                        fill="white"
+                        fontSize="13"
+                        fontFamily="sans-serif"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                      >
+                        {idx + 1}
+                      </text>
+                    </svg>
+                    <span className="font-tajawal">{traveler}</span>
                   </div>
                 ))}
               </div>
@@ -192,291 +214,404 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
       {/* Right Column: طريقة الدفع (md:col-span-5) | Left Column: الحساب المالي (md:col-span-7) */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
         {/* Right Column (First in RTL): طريقة الدفع (md:col-span-5) - Only selected method shown */}
-        <div className="relative border-2 border-slate-800 rounded-2xl p-4 bg-white md:col-span-5 flex flex-col justify-between">
-          {/* Border Title Badge */}
-          <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg">
+        <div className="md:col-span-5 border-2 border-slate-800 rounded-2xl overflow-hidden bg-white flex flex-col">
+          <div className="bg-slate-100 border-b-2 border-slate-800 px-4 pt-[2px] pb-[13px] sm:pt-1 sm:pb-3.5 font-bold text-slate-900 text-base sm:text-lg font-tajawal">
             طريقة الدفع
           </div>
 
-          <div className="pt-2 text-sm sm:text-base space-y-2.5">
-            {/* CASH (نقداً) */}
-            {receipt.paymentMethod === "cash" && (
-              <div className="space-y-2 py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md border-2 border-slate-800 flex items-center justify-center bg-slate-900">
-                    <span className="text-white text-xs font-bold">✓</span>
-                  </div>
-                  <span className="text-lg font-bold text-slate-900">
-                    نقداً (Cash)
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 pr-7">
-                  تم استلام المبلغ نقداً وبعملة الدرهم المغربي
-                </p>
-              </div>
-            )}
-
-            {/* CREDIT CARD (بطاقة ائتمان) */}
-            {receipt.paymentMethod === "credit_card" && (
-              <div className="space-y-2 py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md border-2 border-slate-800 flex items-center justify-center bg-slate-900">
-                    <span className="text-white text-xs font-bold">✓</span>
-                  </div>
-                  <span className="text-base font-bold text-slate-900">
-                    بطاقة ائتمان (Credit Card)
-                  </span>
-                </div>
-                {receipt.cardDetails?.transactionNumber && (
-                  <div className="pr-7 text-xs text-slate-700">
-                    رقم العملية:{" "}
-                    <strong className="font-mono">
-                      {receipt.cardDetails.transactionNumber}
-                    </strong>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* DEBIT CARD (بطاقة الخصم المباشر) */}
-            {receipt.paymentMethod === "debit_card" && (
-              <div className="space-y-2 py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md border-2 border-slate-800 flex items-center justify-center bg-slate-900">
-                    <span className="text-white text-xs font-bold">✓</span>
-                  </div>
-                  <span className="text-base font-bold text-slate-900">
-                    بطاقة الخصم المباشر (Debit Card)
-                  </span>
-                </div>
-                {receipt.cardDetails?.transactionNumber && (
-                  <div className="pr-7 text-xs text-slate-700">
-                    رقم العملية:{" "}
-                    <strong className="font-mono">
-                      {receipt.cardDetails.transactionNumber}
-                    </strong>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* CHEQUE (شيك) */}
-            {receipt.paymentMethod === "cheque" && (
-              <div className="space-y-2 py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md border-2 border-slate-800 flex items-center justify-center bg-slate-900">
-                    <span className="text-white text-xs font-bold">✓</span>
-                  </div>
-                  <span className="text-base font-bold text-slate-900">
-                    شيك بنكي (Cheque)
-                  </span>
-                </div>
-                <div className="pr-7 space-y-1.5 text-xs sm:text-sm text-slate-800">
-                  {receipt.chequeDetails?.personName && (
-                    <div>
-                      اسم الشخص:{" "}
-                      <strong>{receipt.chequeDetails.personName}</strong>
+          <div className="p-4 bg-white flex-1 flex flex-col justify-between">
+            <div className="text-sm sm:text-base space-y-2.5">
+              {/* CASH (نقداً) */}
+              {receipt.paymentMethod === "cash" && (
+                <div className="space-y-2 py-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-md bg-slate-900 flex items-center justify-center shrink-0 mt-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-white"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                     </div>
-                  )}
-                  <div>
-                    رقم الشيك:{" "}
-                    <strong className="font-mono">
-                      {receipt.chequeDetails?.chequeNumber || "-"}
-                    </strong>
+                    <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
+                      نقداً (Cash)
+                    </span>
                   </div>
-                  <div>
-                    اسم البنك:{" "}
-                    <strong>{receipt.chequeDetails?.bankName || "-"}</strong>
-                  </div>
-                  {receipt.chequeDetails?.chequeDate && (
-                    <div>
-                      تاريخ الشيك:{" "}
-                      <strong className="font-mono">
-                        {receipt.chequeDetails.chequeDate}
-                      </strong>
+                  <p className="text-xs text-slate-500 pr-7 font-tajawal">
+                    تم استلام المبلغ نقداً وبعملة الدرهم المغربي
+                  </p>
+                </div>
+              )}
+
+              {/* CREDIT CARD (بطاقة ائتمان) */}
+              {receipt.paymentMethod === "credit_card" && (
+                <div className="space-y-2 py-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-md bg-slate-900 flex items-center justify-center shrink-0 mt-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-white"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* PROMISSORY NOTE (كمبيالة) */}
-            {receipt.paymentMethod === "promissory_note" && (
-              <div className="space-y-2 py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md border-2 border-slate-800 flex items-center justify-center bg-slate-900">
-                    <span className="text-white text-xs font-bold">✓</span>
+                    <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
+                      بطاقة ائتمان (Credit Card)
+                    </span>
                   </div>
-                  <span className="text-base font-bold text-slate-900">
-                    كمبيالة (Lettre de Change)
-                  </span>
-                </div>
-                <div className="pr-7 space-y-1.5 text-xs sm:text-sm text-slate-800">
-                  <div>
-                    اسم الشخص:{" "}
-                    <strong>
-                      {receipt.promissoryNoteDetails?.personName || "-"}
-                    </strong>
-                  </div>
-                  <div>
-                    رقم الكمبيالة:{" "}
-                    <strong className="font-mono">
-                      {receipt.promissoryNoteDetails?.noteNumber || "-"}
-                    </strong>
-                  </div>
-                  <div>
-                    اسم البنك:{" "}
-                    <strong>
-                      {receipt.promissoryNoteDetails?.bankName || "-"}
-                    </strong>
-                  </div>
-                  <div>
-                    تاريخ الاستحقاق:{" "}
-                    <strong className="font-mono">
-                      {receipt.promissoryNoteDetails?.dueDate || "-"}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* BANK TRANSFER (تحويل بنكي) */}
-            {receipt.paymentMethod === "bank_transfer" && (
-              <div className="space-y-2 py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md border-2 border-slate-800 flex items-center justify-center bg-slate-900">
-                    <span className="text-white text-xs font-bold">✓</span>
-                  </div>
-                  <span className="text-base font-bold text-slate-900">
-                    تحويل بنكي (Bank Transfer)
-                  </span>
-                </div>
-                <div className="pr-7 space-y-1.5 text-xs sm:text-sm text-slate-800">
-                  <div>
-                    اسم الشخص:{" "}
-                    <strong>
-                      {receipt.bankTransferDetails?.personName || "-"}
-                    </strong>
-                  </div>
-                  <div>
-                    اسم البنك:{" "}
-                    <strong>
-                      {receipt.bankTransferDetails?.bankName || "-"}
-                    </strong>
-                  </div>
-                  <div>
-                    تاريخ التحويل:{" "}
-                    <strong className="font-mono">
-                      {receipt.bankTransferDetails?.transferDate || "-"}
-                    </strong>
-                  </div>
-                  {receipt.bankTransferDetails?.transactionNumber && (
-                    <div>
+                  {receipt.cardDetails?.transactionNumber && (
+                    <div className="pr-7 text-xs text-slate-700 font-tajawal">
                       رقم العملية:{" "}
                       <strong className="font-mono">
-                        {receipt.bankTransferDetails.transactionNumber}
+                        {receipt.cardDetails.transactionNumber}
                       </strong>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* CASH DEPOSIT (الإيداع النقدي) */}
-            {receipt.paymentMethod === "cash_deposit" && (
-              <div className="space-y-2 py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md border-2 border-slate-800 flex items-center justify-center bg-slate-900">
-                    <span className="text-white text-xs font-bold">✓</span>
+              {/* DEBIT CARD (بطاقة الخصم المباشر) */}
+              {receipt.paymentMethod === "debit_card" && (
+                <div className="space-y-2 py-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-md bg-slate-900 flex items-center justify-center shrink-0 mt-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-white"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
+                      بطاقة الخصم المباشر (Debit Card)
+                    </span>
                   </div>
-                  <span className="text-base font-bold text-slate-900">
-                    إيداع نقدي (Cash Deposit)
-                  </span>
-                </div>
-                <div className="pr-7 space-y-1.5 text-xs sm:text-sm text-slate-800">
-                  <div>
-                    اسم الشخص:{" "}
-                    <strong>
-                      {receipt.cashDepositDetails?.personName || "-"}
-                    </strong>
-                  </div>
-                  <div>
-                    رقم الإيداع:{" "}
-                    <strong className="font-mono">
-                      {receipt.cashDepositDetails?.depositNumber || "-"}
-                    </strong>
-                  </div>
-                  <div>
-                    تاريخ الإيداع:{" "}
-                    <strong className="font-mono">
-                      {receipt.cashDepositDetails?.depositDate || "-"}
-                    </strong>
-                  </div>
-                  {receipt.cashDepositDetails?.bankName && (
-                    <div>
-                      اسم البنك:{" "}
-                      <strong>{receipt.cashDepositDetails.bankName}</strong>
+                  {receipt.cardDetails?.transactionNumber && (
+                    <div className="pr-7 text-xs text-slate-700 font-tajawal">
+                      رقم العملية:{" "}
+                      <strong className="font-mono">
+                        {receipt.cardDetails.transactionNumber}
+                      </strong>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* CHEQUE (شيك) */}
+              {receipt.paymentMethod === "cheque" && (
+                <div className="space-y-2 py-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-md bg-slate-900 flex items-center justify-center shrink-0 mt-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-white"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
+                      شيك بنكي (Cheque)
+                    </span>
+                  </div>
+                  <div className="pr-7 space-y-1.5 text-xs sm:text-sm text-slate-800 font-tajawal">
+                    {receipt.chequeDetails?.personName && (
+                      <div>
+                        اسم الشخص:{" "}
+                        <strong>{receipt.chequeDetails.personName}</strong>
+                      </div>
+                    )}
+                    <div>
+                      رقم الشيك:{" "}
+                      <strong className="font-mono">
+                        {receipt.chequeDetails?.chequeNumber || "-"}
+                      </strong>
+                    </div>
+                    <div>
+                      اسم البنك:{" "}
+                      <strong>{receipt.chequeDetails?.bankName || "-"}</strong>
+                    </div>
+                    {receipt.chequeDetails?.chequeDate && (
+                      <div>
+                        تاريخ الشيك:{" "}
+                        <strong className="font-mono">
+                          {receipt.chequeDetails.chequeDate}
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* PROMISSORY NOTE (كمبيالة) */}
+              {receipt.paymentMethod === "promissory_note" && (
+                <div className="space-y-2 py-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-md bg-slate-900 flex items-center justify-center shrink-0 mt-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-white"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
+                      كمبيالة (Lettre de Change)
+                    </span>
+                  </div>
+                  <div className="pr-7 space-y-1.5 text-xs sm:text-sm text-slate-800 font-tajawal">
+                    <div>
+                      اسم الشخص:{" "}
+                      <strong>
+                        {receipt.promissoryNoteDetails?.personName || "-"}
+                      </strong>
+                    </div>
+                    <div>
+                      رقم الكمبيالة:{" "}
+                      <strong className="font-mono">
+                        {receipt.promissoryNoteDetails?.noteNumber || "-"}
+                      </strong>
+                    </div>
+                    <div>
+                      اسم البنك:{" "}
+                      <strong>
+                        {receipt.promissoryNoteDetails?.bankName || "-"}
+                      </strong>
+                    </div>
+                    <div>
+                      تاريخ الاستحقاق:{" "}
+                      <strong className="font-mono">
+                        {receipt.promissoryNoteDetails?.dueDate || "-"}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* BANK TRANSFER (تحويل بنكي) */}
+              {receipt.paymentMethod === "bank_transfer" && (
+                <div className="space-y-2 py-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-md bg-slate-900 flex items-center justify-center shrink-0 mt-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-white"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
+                      تحويل بنكي (Bank Transfer)
+                    </span>
+                  </div>
+                  <div className="pr-7 space-y-1.5 text-xs sm:text-sm text-slate-800 font-tajawal">
+                    <div>
+                      اسم الشخص:{" "}
+                      <strong>
+                        {receipt.bankTransferDetails?.personName || "-"}
+                      </strong>
+                    </div>
+                    <div>
+                      اسم البنك:{" "}
+                      <strong>
+                        {receipt.bankTransferDetails?.bankName || "-"}
+                      </strong>
+                    </div>
+                    <div>
+                      تاريخ التحويل:{" "}
+                      <strong className="font-mono">
+                        {receipt.bankTransferDetails?.transferDate || "-"}
+                      </strong>
+                    </div>
+                    {receipt.bankTransferDetails?.transactionNumber && (
+                      <div>
+                        رقم العملية:{" "}
+                        <strong className="font-mono">
+                          {receipt.bankTransferDetails.transactionNumber}
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* CASH DEPOSIT (الإيداع النقدي) */}
+              {receipt.paymentMethod === "cash_deposit" && (
+                <div className="space-y-2 py-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-5 h-5 rounded-md bg-slate-900 flex items-center justify-center shrink-0 mt-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-white"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
+                      إيداع نقدي (Cash Deposit)
+                    </span>
+                  </div>
+                  <div className="pr-7 space-y-1.5 text-xs sm:text-sm text-slate-800 font-tajawal">
+                    <div>
+                      اسم الشخص:{" "}
+                      <strong>
+                        {receipt.cashDepositDetails?.personName || "-"}
+                      </strong>
+                    </div>
+                    <div>
+                      رقم الإيداع:{" "}
+                      <strong className="font-mono">
+                        {receipt.cashDepositDetails?.depositNumber || "-"}
+                      </strong>
+                    </div>
+                    <div>
+                      تاريخ الإيداع:{" "}
+                      <strong className="font-mono">
+                        {receipt.cashDepositDetails?.depositDate || "-"}
+                      </strong>
+                    </div>
+                    {receipt.cashDepositDetails?.bankName && (
+                      <div>
+                        اسم البنك:{" "}
+                        <strong>{receipt.cashDepositDetails.bankName}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Left Column (Second in RTL): الحساب المالي (md:col-span-7) - Larger Box */}
-        <div className="relative border-2 border-slate-800 rounded-2xl p-4 sm:p-5 bg-white md:col-span-7 flex flex-col justify-between">
-          {/* Border Title Badge */}
-          <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg">
+        {/* Left Column (Second in RTL): الحساب المالي (md:col-span-7) */}
+        <div className="md:col-span-7 border-2 border-slate-800 rounded-2xl overflow-hidden bg-white flex flex-col">
+          <div className="bg-slate-100 border-b-2 border-slate-800 px-4 pt-[2px] pb-[13px] sm:pt-1 sm:pb-3.5 font-bold text-slate-900 text-base sm:text-lg font-tajawal">
             الحساب المالي
           </div>
 
-          <div className="space-y-2.5 pt-1.5">
-            {/* If total contract value was provided, show full contract breakdown */}
-            {receipt.totalAmount && receipt.totalAmount > 0 ? (
-              <>
-                {/* 1. إجمالي العقد / المطلوب */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 text-slate-800">
-                  <span className="font-bold text-sm sm:text-base">
-                    إجمالي العقد / المطلوب:
-                  </span>
-                  <span
-                    className="font-mono font-bold text-base sm:text-lg"
-                    dir="ltr"
-                  >
-                    {formatCurrency(
-                      receipt.totalAmount,
-                      company.currencySymbol,
-                    )}
-                  </span>
-                </div>
+          <div className="p-4 sm:p-5 bg-white flex-1 flex flex-col justify-between">
+            <div className="space-y-2.5">
+              {/* If total contract value was provided, show full contract breakdown */}
+              {receipt.totalAmount && receipt.totalAmount > 0 ? (
+                <>
+                  {/* 1. إجمالي العقد / المطلوب */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 text-slate-800">
+                    <span className="font-bold text-sm sm:text-base">
+                      إجمالي العقد / المطلوب:
+                    </span>
+                    <span
+                      className="font-mono font-bold text-base sm:text-lg"
+                      dir="ltr"
+                    >
+                      {formatCurrency(
+                        receipt.totalAmount,
+                        company.currencySymbol,
+                      )}
+                    </span>
+                  </div>
 
-                {/* 2. المبلغ المتبقي في الدفعة الأخيرة (اختياري في السند الجديد، وإلزامي في سند القسط) */}
-                {receipt.previousRemainingAmount !== undefined &&
-                  receipt.previousRemainingAmount !== null && (
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 text-slate-800">
-                      <span className="font-bold text-sm sm:text-base">
-                        المبلغ المتبقي في الدفعة الأخيرة:
+                  {/* 2. المبلغ المتبقي في الدفعة الأخيرة (اختياري في السند الجديد، وإلزامي في سند القسط) */}
+                  {receipt.previousRemainingAmount !== undefined &&
+                    receipt.previousRemainingAmount !== null && (
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 text-slate-800">
+                        <span className="font-bold text-sm sm:text-base">
+                          المبلغ المتبقي في الدفعة الأخيرة:
+                        </span>
+                        <span
+                          className="font-mono font-bold text-base sm:text-lg text-amber-800"
+                          dir="ltr"
+                        >
+                          {formatCurrency(
+                            receipt.previousRemainingAmount,
+                            company.currencySymbol,
+                          )}
+                        </span>
+                      </div>
+                    )}
+
+                  {/* 3. المبلغ الحالي */}
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2 pt-0.5">
+                    <span className="font-bold text-slate-900 text-base sm:text-lg">
+                      المبلغ الحالي:
+                    </span>
+                    <div
+                      className="text-xl sm:text-2xl font-extrabold text-blue-700 font-mono tracking-tight flex items-baseline gap-1.5"
+                      dir="ltr"
+                    >
+                      <span>
+                        {receipt.paidAmount.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </span>
-                      <span
-                        className="font-mono font-bold text-base sm:text-lg text-amber-800"
-                        dir="ltr"
-                      >
-                        {formatCurrency(
-                          receipt.previousRemainingAmount,
-                          company.currencySymbol,
-                        )}
+                      <span className="text-lg font-bold text-blue-900">
+                        {company.currencySymbol || "dh"}
                       </span>
                     </div>
-                  )}
+                  </div>
 
-                {/* 3. المبلغ الحالي */}
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2 pt-0.5">
-                  <span className="font-bold text-slate-900 text-base sm:text-lg">
-                    المبلغ الحالي:
+                  {/* 4. المبلغ المتبقي */}
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="font-bold text-sm sm:text-base text-slate-900">
+                      المبلغ المتبقي:
+                    </span>
+                    <div
+                      className={`font-mono font-bold text-base sm:text-lg ${
+                        (receipt.remainingAmount || 0) > 0
+                          ? "text-amber-700"
+                          : "text-emerald-700"
+                      }`}
+                      dir="ltr"
+                    >
+                      {formatCurrency(
+                        receipt.remainingAmount || 0,
+                        company.currencySymbol,
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* If NO total contract was entered: Show ONLY المبلغ الحالي (No total, No remaining balance!) */
+                <div className="my-auto py-3 text-center space-y-1.5">
+                  <span className="font-bold text-slate-800 text-base sm:text-lg block">
+                    المبلغ الحالي المقبوض:
                   </span>
                   <div
-                    className="text-xl sm:text-2xl font-extrabold text-blue-700 font-mono tracking-tight flex items-baseline gap-1.5"
+                    className="text-3xl sm:text-4xl font-extrabold text-blue-700 font-mono tracking-tight flex items-baseline justify-center gap-2"
                     dir="ltr"
                   >
                     <span>
@@ -485,74 +620,31 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
                         maximumFractionDigits: 2,
                       })}
                     </span>
-                    <span className="text-lg font-bold text-blue-900">
+                    <span className="text-2xl font-bold text-blue-900">
                       {company.currencySymbol || "dh"}
                     </span>
                   </div>
+                  <p className="text-xs text-slate-400">
+                    سند قبض مالي بمبلغ مقبوض مباشر
+                  </p>
                 </div>
-
-                {/* 4. المبلغ المتبقي */}
-                <div className="flex items-center justify-between pt-0.5">
-                  <span className="font-bold text-sm sm:text-base text-slate-900">
-                    المبلغ المتبقي:
-                  </span>
-                  <div
-                    className={`font-mono font-bold text-base sm:text-lg ${
-                      (receipt.remainingAmount || 0) > 0
-                        ? "text-amber-700"
-                        : "text-emerald-700"
-                    }`}
-                    dir="ltr"
-                  >
-                    {formatCurrency(
-                      receipt.remainingAmount || 0,
-                      company.currencySymbol,
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              /* If NO total contract was entered: Show ONLY المبلغ الحالي (No total, No remaining balance!) */
-              <div className="my-auto py-3 text-center space-y-1.5">
-                <span className="font-bold text-slate-800 text-base sm:text-lg block">
-                  المبلغ الحالي المقبوض:
-                </span>
-                <div
-                  className="text-3xl sm:text-4xl font-extrabold text-blue-700 font-mono tracking-tight flex items-baseline justify-center gap-2"
-                  dir="ltr"
-                >
-                  <span>
-                    {receipt.paidAmount.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                  <span className="text-2xl font-bold text-blue-900">
-                    {company.currencySymbol || "dh"}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">
-                  سند قبض مالي بمبلغ مقبوض مباشر
-                </p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* ================= SECTION 3: PURPOSE (وذلك مقابل) ================= */}
-      <div className="relative border-2 border-slate-800 rounded-2xl p-4 sm:p-5 mb-5 bg-white">
-        {/* Border Title Badge */}
-        <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg">
+      <div className="border-2 border-slate-800 rounded-2xl overflow-hidden bg-white mb-5">
+        <div className="bg-slate-100 border-b-2 border-slate-800 px-4 pt-[2px] pb-[13px] sm:pt-1 sm:pb-3.5 font-bold text-slate-900 text-base sm:text-lg font-tajawal">
           وذلك مقابل
         </div>
 
-        {/* 3 Dedicated Ruled Lines with Text locked directly onto each line */}
-        <div className="pt-2 space-y-2">
+        <div className="p-4 sm:p-5 bg-white space-y-2.5">
           {purposeLines.map((lineText, idx) => (
             <div
               key={idx}
-              className="border-b border-slate-300 min-h-[30px] pb-1 px-1 flex items-end"
+              className="border-b border-slate-300 min-h-[34px] pb-1.5 px-1 flex items-end"
             >
               <span className="text-base sm:text-lg font-medium text-slate-900 font-tajawal leading-normal">
                 {lineText}

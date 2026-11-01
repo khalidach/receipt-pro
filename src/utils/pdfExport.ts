@@ -36,10 +36,11 @@ export async function exportReceiptToPDF(
     throw new Error(`Element with id "${elementId}" not found`);
   }
 
-  // 1. Ensure all custom fonts (Amiri, Tajawal, Cairo) are fully loaded
+  // 1. Ensure all custom fonts (Amiri, Tajawal, Cairo) are fully loaded and layout settled
   if (document.fonts) {
     await document.fonts.ready;
   }
+  await new Promise((resolve) => setTimeout(resolve, 80));
 
   // 2. Capture canvas with 3x scale for ultra crisp text and Arabic glyphs
   const canvas = await html2canvas(element, {
