@@ -52,13 +52,16 @@ async function createWindow() {
   const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
   const distPath = path.join(__dirname, '../dist/index.html');
 
-  // Check if Vite dev server is currently running
-  const isDevRunning = await checkUrlLive(devServerUrl);
+  if (!app.isPackaged) {
+    const isDevRunning = await checkUrlLive(devServerUrl);
+    if (isDevRunning) {
+      console.log(`[Electron] Loading from active dev server: ${devServerUrl}`);
+      await mainWindow.loadURL(devServerUrl);
+      return;
+    }
+  }
 
-  if (isDevRunning) {
-    console.log(`[Electron] Loading from active dev server: ${devServerUrl}`);
-    await mainWindow.loadURL(devServerUrl);
-  } else if (fs.existsSync(distPath)) {
+  if (fs.existsSync(distPath)) {
     console.log(`[Electron] Loading from built dist: ${distPath}`);
     await mainWindow.loadFile(distPath);
   } else {

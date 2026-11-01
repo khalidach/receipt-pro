@@ -21,83 +21,7 @@ export const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
 };
 
 // Initial Seed Data matching the user's reference photo (R-712860, 2026-11-01)
-export const SEED_RECEIPTS: Receipt[] = [
-  {
-    id: "receipt-712860",
-    receiptNumber: "R-712860",
-    date: "2026-11-01",
-    clientName: "السيد / محمد العمراني",
-    totalAmount: 15000,
-    paidAmount: 5000,
-    remainingAmount: 10000,
-    amountInWords: tafqeetDirham(5000),
-    purpose:
-      "دفعة أولى لتوريد وتثبيت معدات مكتبية وأنظمة معلوماتية متطورة بمقر الشركة",
-    paymentMethod: "cash",
-    createdAt: "2026-11-01T10:00:00Z",
-    updatedAt: "2026-11-01T10:00:00Z",
-  },
-  {
-    id: "receipt-712861",
-    receiptNumber: "R-712861",
-    date: "2026-11-01",
-    clientName: "شركة الأطلس للاستثمار العقاري",
-    totalAmount: 48000,
-    paidAmount: 24000,
-    remainingAmount: 24000,
-    amountInWords: tafqeetDirham(24000),
-    purpose: "قسط ربع سنوي عن إيجار المحل التجاري الكائن بالمركز التجاري البرج",
-    paymentMethod: "cheque",
-    chequeDetails: {
-      chequeNumber: "CHQ-884920",
-      bankName: "التجاري وفا بنك (Attijariwafa Bank)",
-      chequeDate: "2026-11-05",
-    },
-    createdAt: "2026-11-01T11:15:00Z",
-    updatedAt: "2026-11-01T11:15:00Z",
-  },
-  {
-    id: "receipt-712862",
-    receiptNumber: "R-712862",
-    date: "2026-10-28",
-    clientName: "سارة العلمي",
-    totalAmount: 7500,
-    paidAmount: 7500,
-    remainingAmount: 0,
-    amountInWords: tafqeetDirham(7500),
-    purpose: "أتعاب استشارات وتصميم هوية بصرية كاملة مع دليل العلامة التجارية",
-    paymentMethod: "bank_transfer",
-    bankTransferDetails: {
-      transactionNumber: "TRF-BMCE-99214",
-      bankName: "بنك إفريقيا (Bank of Africa)",
-      transferDate: "2026-10-28",
-    },
-    createdAt: "2026-10-28T09:30:00Z",
-    updatedAt: "2026-10-28T09:30:00Z",
-  },
-  {
-    id: "receipt-712863",
-    receiptNumber: "R-712863",
-    date: "2026-11-01",
-    clientName: "السيد / خالد اشبوخ",
-    totalAmount: 36000,
-    paidAmount: 12000,
-    remainingAmount: 24000,
-    amountInWords: tafqeetDirham(12000),
-    purpose:
-      "حجز رحلة عمرة شاملة تذاكر الطيران والإقامة الفندقية بمكة والمدينة والنقل",
-    paymentMethod: "bank_transfer",
-    hasTravelers: true,
-    travelers: ["خالد اشبوخ", "نوال اشبوخ", "سعيد اشبوخ"],
-    bankTransferDetails: {
-      transactionNumber: "VIR-ATTIJARI-55102",
-      bankName: "التجاري وفا بنك",
-      transferDate: "2026-11-01",
-    },
-    createdAt: "2026-11-01T11:45:00Z",
-    updatedAt: "2026-11-01T11:45:00Z",
-  },
-];
+export const SEED_RECEIPTS: Receipt[] = [];
 
 /**
  * Storage helpers with LocalStorage & fallbacks
@@ -106,7 +30,10 @@ export const SEED_RECEIPTS: Receipt[] = [
  * Storage helpers with LocalStorage & fallbacks
  */
 export function getInitialPaidAmount(receipt: Receipt): number {
-  if (receipt.initialPaidAmount !== undefined && receipt.initialPaidAmount !== null) {
+  if (
+    receipt.initialPaidAmount !== undefined &&
+    receipt.initialPaidAmount !== null
+  ) {
     return receipt.initialPaidAmount;
   }
   const childInstallments = (receipt.installments || []).reduce(
@@ -236,10 +163,7 @@ export function getStoredReceipts(): Receipt[] {
     const data = localStorage.getItem(STORAGE_KEYS.RECEIPTS);
     if (!data) {
       const syncedSeed = syncReceipts(SEED_RECEIPTS);
-      localStorage.setItem(
-        STORAGE_KEYS.RECEIPTS,
-        JSON.stringify(syncedSeed),
-      );
+      localStorage.setItem(STORAGE_KEYS.RECEIPTS, JSON.stringify(syncedSeed));
       return syncedSeed;
     }
     const parsed = JSON.parse(data);
