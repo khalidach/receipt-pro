@@ -59,9 +59,11 @@ export interface Receipt {
   date: string; // YYYY-MM-DD
   clientName: string; // وصلنا من السيد / السادة
   totalAmount?: number; // إجمالي العقد / المطلوب (اختياري)
+  initialPaidAmount?: number; // المبلغ المدفوع كدفعة أولى عند إنشاء السند الأصلي
   previousRemainingAmount?: number; // المبلغ المتبقي في الدفعة الأخيرة (اختياري في السند الجديد، إلزامي في القسط)
   paidAmount: number; // المبلغ الحالي / المدفوع
   remainingAmount?: number; // المبلغ المتبقي (يظهر فقط إذا كان إجمالي العقد موجوداً)
+  stepRemainingAmount?: number; // المبلغ المتبقي بعد أداء هذا القسط مباشرة
   amountInWords: string; // تفقيط المبلغ بالدرهم المغربي
   purpose: string; // وذلك مقابل / عن
   paymentMethod: PaymentMethodType;

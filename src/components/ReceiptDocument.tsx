@@ -579,16 +579,23 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
                       المبلغ المتبقي:
                     </span>
                     <div
-                      className={`font-mono font-bold text-base sm:text-lg ${
+                      className={`font-mono font-bold text-base sm:text-lg flex items-center gap-1.5 ${
                         (receipt.remainingAmount || 0) > 0
                           ? "text-amber-700"
                           : "text-emerald-700"
                       }`}
                       dir="ltr"
                     >
-                      {formatCurrency(
-                        receipt.remainingAmount || 0,
-                        company.currencySymbol,
+                      <span>
+                        {formatCurrency(
+                          receipt.remainingAmount || 0,
+                          company.currencySymbol,
+                        )}
+                      </span>
+                      {(receipt.remainingAmount || 0) === 0 && (
+                        <span className="text-xs font-bold font-tajawal bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-200">
+                          (مسدد بالكامل ✓)
+                        </span>
                       )}
                     </div>
                   </div>

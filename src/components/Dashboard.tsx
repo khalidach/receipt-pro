@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Receipt, CompanyProfile } from '../types/receipt';
 import { formatCurrency } from '../utils/tafqeet';
+import { getInitialPaidAmount } from '../utils/storage';
 import {
   FileText,
   DollarSign,
@@ -45,25 +46,32 @@ export const Dashboard: React.FC<DashboardProps> = ({
     let transferAmount = 0;
 
     receipts.forEach(r => {
-      totalRevenue += r.paidAmount;
-      if (r.remainingAmount) {
+      // Child receipts represent the installment payment; parent receipts represent the initial down-payment
+      const actualPayment = r.parentReceiptId
+        ? r.paidAmount
+        : getInitialPaidAmount(r);
+
+      totalRevenue += actualPayment;
+
+      // Pending balance is tracked only from the parent contract (avoid double-counting in installments)
+      if (!r.parentReceiptId && r.remainingAmount) {
         totalPending += r.remainingAmount;
       }
 
       if (r.date === todayStr) {
-        todayRevenue += r.paidAmount;
+        todayRevenue += actualPayment;
         todayCount += 1;
       }
 
       if (r.paymentMethod === 'cash') {
         cashCount += 1;
-        cashAmount += r.paidAmount;
+        cashAmount += actualPayment;
       } else if (r.paymentMethod === 'cheque') {
         chequeCount += 1;
-        chequeAmount += r.paidAmount;
+        chequeAmount += actualPayment;
       } else {
         transferCount += 1;
-        transferAmount += r.paidAmount;
+        transferAmount += actualPayment;
       }
     });
 

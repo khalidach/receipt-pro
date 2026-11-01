@@ -74,15 +74,15 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({
   const handleDelete = (receipt: Receipt) => {
     const isInstallment = Boolean(receipt.parentReceiptId);
     const confirmMsg = isInstallment
-      ? `هل أنت متأكد من حذف هذا القسط (${receipt.receiptNumber})؟\nسيتم خصم مبلغه (${receipt.paidAmount} dh) تلقائياً من السند الأصلي.`
-      : `هل أنت متأكد من حذف السند رقم (${receipt.receiptNumber})؟`;
+      ? `هل أنت متأكد من حذف هذا القسط (${receipt.receiptNumber})؟\nسيتم تعديل المبلغ المتبقي ومزامنة باقي الأقساط والسند الأصلي تلقائياً.`
+      : `هل أنت متأكد من حذف السند رقم (${receipt.receiptNumber})؟\nسيتم حذف جميع الأقساط المرتبطة به أيضاً.`;
 
     if (confirm(confirmMsg)) {
       deleteReceipt(receipt.id);
       toast.success(
         isInstallment
-          ? `تم حذف القسط رقم ${receipt.receiptNumber} وخصم مبلغه من السند الأصلي بنجاح`
-          : `تم حذف السند رقم ${receipt.receiptNumber}`
+          ? `تم حذف القسط رقم ${receipt.receiptNumber} وتعديل المبالغ المتبقية في الأقساط بنجاح`
+          : `تم حذف السند رقم ${receipt.receiptNumber} وكافة متعلقاته`
       );
       onReceiptsChange();
     }
@@ -357,10 +357,15 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {/* Collect Installment if pending and it is an original receipt (not an installment child receipt) */}
-                          {hasRemaining && !receipt.parentReceiptId && (
+                          {/* Collect Installment if pending */}
+                          {hasRemaining && (
                             <button
-                              onClick={() => onAddInstallment(receipt)}
+                              onClick={() => {
+                                const targetParent = receipt.parentReceiptId
+                                  ? receipts.find(r => r.id === receipt.parentReceiptId) || receipt
+                                  : receipt;
+                                onAddInstallment(targetParent);
+                              }}
                               title="تحصيل قسط جديد"
                               className="p-1.5 text-emerald-600 hover:bg-emerald-100/60 rounded-lg transition-colors"
                             >

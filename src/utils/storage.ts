@@ -102,17 +102,149 @@ export const SEED_RECEIPTS: Receipt[] = [
 /**
  * Storage helpers with LocalStorage & fallbacks
  */
+/**
+ * Storage helpers with LocalStorage & fallbacks
+ */
+export function getInitialPaidAmount(receipt: Receipt): number {
+  if (receipt.initialPaidAmount !== undefined && receipt.initialPaidAmount !== null) {
+    return receipt.initialPaidAmount;
+  }
+  const childInstallments = (receipt.installments || []).reduce(
+    (sum, inst) => sum + (inst.amount || 0),
+    0,
+  );
+  if (receipt.paidAmount > childInstallments) {
+    return receipt.paidAmount - childInstallments;
+  }
+  if (receipt.totalAmount && receipt.remainingAmount !== undefined) {
+    const calculated =
+      receipt.totalAmount - receipt.remainingAmount - childInstallments;
+    if (calculated >= 0) return calculated;
+  }
+  return receipt.paidAmount;
+}
+
+/**
+ * Synchronize all parent receipts and their installment chains.
+ * Ensures:
+ * 1. Sequential order of installments: updates previousRemainingAmount & stepRemainingAmount.
+ * 2. Parent's paidAmount equals initial down-payment + sum of existing installments.
+ * 3. Parent's remainingAmount equals totalAmount - paidAmount.
+ * 4. When a contract is fully paid (remainingAmount === 0), ALL installments in the chain are marked as paid (remainingAmount: 0).
+ * 5. When an installment is deleted, all remaining installments automatically recalculate their remaining amount and previous balance.
+ * 6. Sibling installments stay 100% consistent across the app.
+ */
+export function syncReceipts(receipts: Receipt[]): Receipt[] {
+  const parents = receipts.filter((r) => !r.parentReceiptId);
+  const children = receipts.filter((r) => Boolean(r.parentReceiptId));
+
+  const updatedReceipts: Receipt[] = [];
+
+  for (const parent of parents) {
+    const parentCopy: Receipt = { ...parent };
+    const parentChildren = children
+      .filter((c) => c.parentReceiptId === parentCopy.id)
+      .sort((a, b) => {
+        const dateA = a.date || "";
+        const dateB = b.date || "";
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        const timeA = a.createdAt || "";
+        const timeB = b.createdAt || "";
+        return timeA.localeCompare(timeB);
+      });
+
+    // If no contract total amount, keep as standalone receipt
+    if (!parentCopy.totalAmount || parentCopy.totalAmount <= 0) {
+      updatedReceipts.push(parentCopy);
+      parentChildren.forEach((c) => updatedReceipts.push({ ...c }));
+      continue;
+    }
+
+    const totalContract = parentCopy.totalAmount;
+    const initialPaid = getInitialPaidAmount(parentCopy);
+    parentCopy.initialPaidAmount = initialPaid;
+
+    let runningRemaining = Math.max(0, totalContract - initialPaid);
+    let totalInstallmentsPaid = 0;
+    const updatedPaymentRecords: PaymentRecord[] = [];
+    const updatedChildren: Receipt[] = [];
+
+    for (const child of parentChildren) {
+      const childCopy: Receipt = { ...child };
+      const prevRemaining = runningRemaining;
+      const childAmt = childCopy.paidAmount || 0;
+      totalInstallmentsPaid += childAmt;
+      runningRemaining = Math.max(0, runningRemaining - childAmt);
+
+      childCopy.totalAmount = totalContract;
+      childCopy.clientName = parentCopy.clientName;
+      childCopy.previousRemainingAmount = prevRemaining;
+      childCopy.stepRemainingAmount = runningRemaining;
+      childCopy.remainingAmount = runningRemaining;
+
+      updatedPaymentRecords.push({
+        id: childCopy.id,
+        date: childCopy.date,
+        amount: childAmt,
+        paymentMethod: childCopy.paymentMethod,
+        chequeDetails: childCopy.chequeDetails,
+        promissoryNoteDetails: childCopy.promissoryNoteDetails,
+        bankTransferDetails: childCopy.bankTransferDetails,
+        cashDepositDetails: childCopy.cashDepositDetails,
+        cardDetails: childCopy.cardDetails,
+        notes: childCopy.notes,
+      });
+
+      updatedChildren.push(childCopy);
+    }
+
+    const totalPaidContract = initialPaid + totalInstallmentsPaid;
+    const contractRemaining = Math.max(0, totalContract - totalPaidContract);
+
+    parentCopy.paidAmount = totalPaidContract;
+    parentCopy.remainingAmount = contractRemaining;
+    parentCopy.amountInWords = tafqeetDirham(totalPaidContract);
+    parentCopy.installments = updatedPaymentRecords;
+
+    // Synchronize remaining balance across all installments of this contract
+    for (const child of updatedChildren) {
+      if (contractRemaining === 0) {
+        child.remainingAmount = 0;
+      } else {
+        child.remainingAmount = contractRemaining;
+      }
+    }
+
+    updatedReceipts.push(parentCopy);
+    updatedReceipts.push(...updatedChildren);
+  }
+
+  // Any orphaned child receipts whose parent doesn't exist
+  const orphanChildren = children.filter(
+    (c) => !parents.some((p) => p.id === c.parentReceiptId),
+  );
+  updatedReceipts.push(...orphanChildren);
+
+  const idToUpdated = new Map(updatedReceipts.map((r) => [r.id, r]));
+  return receipts
+    .map((r) => idToUpdated.get(r.id) || r)
+    .filter((r, idx, self) => self.findIndex((s) => s.id === r.id) === idx);
+}
+
 export function getStoredReceipts(): Receipt[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.RECEIPTS);
     if (!data) {
+      const syncedSeed = syncReceipts(SEED_RECEIPTS);
       localStorage.setItem(
         STORAGE_KEYS.RECEIPTS,
-        JSON.stringify(SEED_RECEIPTS),
+        JSON.stringify(syncedSeed),
       );
-      return SEED_RECEIPTS;
+      return syncedSeed;
     }
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    const synced = syncReceipts(parsed);
+    return synced;
   } catch (error) {
     console.error("Failed to read receipts from localStorage:", error);
     return SEED_RECEIPTS;
@@ -184,9 +316,14 @@ export function generateNextReceiptNumber(): string {
  */
 export function addReceipt(receipt: Receipt): Receipt {
   const receipts = getStoredReceipts();
-  const updated = [receipt, ...receipts];
-  saveReceipts(updated);
-  return receipt;
+  const toAdd: Receipt = {
+    ...receipt,
+    initialPaidAmount: receipt.initialPaidAmount ?? receipt.paidAmount,
+  };
+  const updated = [toAdd, ...receipts];
+  const synced = syncReceipts(updated);
+  saveReceipts(synced);
+  return synced.find((r) => r.id === receipt.id) || toAdd;
 }
 
 /**
@@ -197,97 +334,48 @@ export function updateReceipt(receipt: Receipt): void {
   const index = receipts.findIndex((r) => r.id === receipt.id);
   if (index !== -1) {
     receipts[index] = { ...receipt, updatedAt: new Date().toISOString() };
-    saveReceipts(receipts);
+    const synced = syncReceipts(receipts);
+    saveReceipts(synced);
   }
 }
 
 /**
  * Delete a receipt
- * If this receipt is an installment (child receipt), deduct its amount from the parent receipt
+ * If this receipt is an installment (child receipt), deduct its amount and resync all remaining installments
+ * If this receipt is a parent receipt, cascade-delete all its child installments
  */
 export function deleteReceipt(id: string): void {
   const receipts = getStoredReceipts();
   const toDelete = receipts.find((r) => r.id === id);
   if (!toDelete) return;
 
-  let updatedList = receipts.filter((r) => r.id !== id);
-
-  // If the deleted receipt is a child/installment of a parent receipt
+  let remainingList: Receipt[];
   if (toDelete.parentReceiptId) {
-    const parentIndex = updatedList.findIndex(
-      (r) => r.id === toDelete.parentReceiptId,
+    remainingList = receipts.filter((r) => r.id !== id);
+  } else {
+    // Delete parent and all its child installments
+    remainingList = receipts.filter(
+      (r) => r.id !== id && r.parentReceiptId !== id,
     );
-    if (parentIndex !== -1) {
-      const parent = updatedList[parentIndex];
-      const newPaid = Math.max(0, parent.paidAmount - toDelete.paidAmount);
-      const newRemaining = Math.max(
-        0,
-        (parent.totalAmount || parent.paidAmount) - newPaid,
-      );
-      const updatedInstallments = (parent.installments || []).filter(
-        (inst) =>
-          inst.id !== toDelete.id &&
-          !(inst.amount === toDelete.paidAmount && inst.date === toDelete.date),
-      );
-
-      updatedList[parentIndex] = {
-        ...parent,
-        paidAmount: newPaid,
-        remainingAmount: newRemaining,
-        amountInWords: tafqeetDirham(newPaid),
-        installments: updatedInstallments,
-        updatedAt: new Date().toISOString(),
-      };
-    }
   }
 
-  saveReceipts(updatedList);
+  const synced = syncReceipts(remainingList);
+  saveReceipts(synced);
 }
 
 /**
  * Delete an installment from a parent receipt's chain
- * Deducts the installment amount from the parent receipt and deletes the corresponding child receipt
+ * Deducts the installment amount and re-synchronizes all remaining installments and parent
  */
 export function deleteInstallmentFromParent(
   parentReceiptId: string,
   installmentId: string,
 ): Receipt | null {
   const receipts = getStoredReceipts();
-  const parentIndex = receipts.findIndex((r) => r.id === parentReceiptId);
-  if (parentIndex === -1) return null;
-
-  const parent = receipts[parentIndex];
-  const targetRecord = (parent.installments || []).find(
-    (inst) => inst.id === installmentId,
-  );
-  if (!targetRecord) return parent;
-
-  const deductedAmount = targetRecord.amount;
-  const newPaid = Math.max(0, parent.paidAmount - deductedAmount);
-  const newRemaining = Math.max(
-    0,
-    (parent.totalAmount || parent.paidAmount) - newPaid,
-  );
-  const updatedInstallments = (parent.installments || []).filter(
-    (inst) => inst.id !== installmentId,
-  );
-
-  const updatedParent: Receipt = {
-    ...parent,
-    paidAmount: newPaid,
-    remainingAmount: newRemaining,
-    amountInWords: tafqeetDirham(newPaid),
-    installments: updatedInstallments,
-    updatedAt: new Date().toISOString(),
-  };
-
-  // Also remove the corresponding child receipt if present
-  const updatedList = receipts
-    .filter((r) => r.id !== installmentId)
-    .map((r) => (r.id === parent.id ? updatedParent : r));
-
-  saveReceipts(updatedList);
-  return updatedParent;
+  const remainingList = receipts.filter((r) => r.id !== installmentId);
+  const synced = syncReceipts(remainingList);
+  saveReceipts(synced);
+  return synced.find((r) => r.id === parentReceiptId) || null;
 }
 
 /**
@@ -315,46 +403,19 @@ export function recordInstallment(
     generateNextReceiptNumber();
   const childId = `receipt-${Date.now()}`;
 
-  // Create payment record in parent's history linked to child receipt ID
-  const paymentRecord: PaymentRecord = {
-    id: childId,
-    date: currentDate,
-    amount: installmentAmount,
-    paymentMethod,
-    chequeDetails,
-    bankTransferDetails,
-    notes,
-  };
-
-  const existingHistory = parent.installments || [];
-  const updatedHistory = [...existingHistory, paymentRecord];
-
-  // Total paid so far = initial paid + sum of installments
-  const newPaidTotal = parent.paidAmount + installmentAmount;
-  const newRemaining = Math.max(
-    0,
-    (parent.totalAmount || parent.paidAmount) - newPaidTotal,
-  );
-
-  const updatedParent: Receipt = {
-    ...parent,
-    paidAmount: newPaidTotal,
-    remainingAmount: newRemaining,
-    amountInWords: tafqeetDirham(newPaidTotal),
-    installments: updatedHistory,
-    updatedAt: new Date().toISOString(),
-  };
-
-  // Create the new standalone receipt for this specific installment payment
+  // Create the new child receipt
   const childReceipt: Receipt = {
     id: childId,
     receiptNumber: newReceiptNumber,
     date: currentDate,
     clientName: parent.clientName,
     totalAmount: parent.totalAmount,
-    previousRemainingAmount: parent.remainingAmount, // المبلغ المتبقي في الدفعة الأخيرة (إلزامي في القسط)
-    paidAmount: installmentAmount, // المبلغ الحالي
-    remainingAmount: newRemaining, // المبلغ المتبقي = المبلغ المتبقي في الدفعة الأخيرة - المبلغ الحالي
+    previousRemainingAmount: parent.remainingAmount,
+    paidAmount: installmentAmount,
+    remainingAmount: Math.max(
+      0,
+      (parent.remainingAmount || 0) - installmentAmount,
+    ),
     amountInWords: tafqeetDirham(installmentAmount),
     purpose: `دفعة مالية تابعة للسند رقم (${parent.receiptNumber}) - ${parent.purpose}${notes ? ` - ${notes}` : ""}`,
     paymentMethod,
@@ -369,11 +430,12 @@ export function recordInstallment(
     updatedAt: new Date().toISOString(),
   };
 
-  const newReceiptsList = [
-    childReceipt,
-    ...receipts.map((r) => (r.id === parent.id ? updatedParent : r)),
-  ];
+  const newReceiptsList = [childReceipt, ...receipts];
+  const synced = syncReceipts(newReceiptsList);
+  saveReceipts(synced);
 
-  saveReceipts(newReceiptsList);
-  return { childReceipt, parentReceipt: updatedParent };
+  const syncedParent = synced.find((r) => r.id === parentReceiptId)!;
+  const syncedChild = synced.find((r) => r.id === childId)!;
+
+  return { childReceipt: syncedChild, parentReceipt: syncedParent };
 }

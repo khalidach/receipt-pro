@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Receipt, CompanyProfile } from '../types/receipt';
 import { ReceiptDocument } from './ReceiptDocument';
 import { printReceipt, exportReceiptToPDF } from '../utils/pdfExport';
-import { deleteInstallmentFromParent } from '../utils/storage';
+import { deleteInstallmentFromParent, getStoredReceipts } from '../utils/storage';
 import {
   Printer,
   Download,
@@ -116,12 +116,15 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
               </button>
             )}
 
-            {(receipt.remainingAmount || 0) > 0 && !receipt.parentReceiptId && (
+            {(receipt.remainingAmount || 0) > 0 && (
               <button
                 type="button"
                 onClick={() => {
                   onClose();
-                  onAddInstallment(receipt);
+                  const targetParent = receipt.parentReceiptId
+                    ? getStoredReceipts().find(r => r.id === receipt.parentReceiptId) || receipt
+                    : receipt;
+                  onAddInstallment(targetParent);
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-colors"
               >

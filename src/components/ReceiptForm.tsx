@@ -305,6 +305,9 @@ export const ReceiptForm: React.FC<ReceiptFormProps> = ({
       date,
       clientName: clientName.trim(),
       totalAmount: hasContract ? parsedTotal : undefined,
+      initialPaidAmount:
+        initialReceipt?.initialPaidAmount ??
+        (initialReceipt?.parentReceiptId ? undefined : paidAmount),
       previousRemainingAmount:
         parsedPrevRemaining !== null && !isNaN(parsedPrevRemaining)
           ? parsedPrevRemaining
