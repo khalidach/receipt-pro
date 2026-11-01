@@ -32,7 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-amiri font-bold text-2xl text-slate-900 tracking-wide">
+                <span className="font-amiri font-bold text-2xl text-slate-900">
                   سند برو
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-widest font-mono">

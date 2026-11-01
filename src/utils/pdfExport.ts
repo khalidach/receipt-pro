@@ -23,7 +23,7 @@ export async function printReceipt(): Promise<void> {
 }
 
 /**
- * Exports the receipt element as a crisp, high-resolution A4 PDF
+ * Exports the receipt element as a crisp, high-resolution A4 PDF with exact RTL shaping and balanced margins
  */
 export async function exportReceiptToPDF(
   elementId: string = 'receipt-print-area',
@@ -44,13 +44,48 @@ export async function exportReceiptToPDF(
     throw new Error(`Element with id "${elementId}" not found`);
   }
 
-  // Create canvas with 2.5x scale for crisp font rendering
+  // 1. Ensure all custom fonts (Amiri, Tajawal, Cairo) are fully loaded
+  if (document.fonts) {
+    await document.fonts.ready;
+  }
+
+  // 2. Capture canvas with 3x scale for ultra crisp text and Arabic glyphs
   const canvas = await html2canvas(element, {
-    scale: 2.5,
+    scale: 3,
     useCORS: true,
     logging: false,
     backgroundColor: '#ffffff',
-    windowWidth: element.scrollWidth,
+    windowWidth: 794,
+    onclone: (clonedDoc) => {
+      const clonedEl = clonedDoc.getElementById(elementId);
+      if (clonedEl) {
+        // Enforce exact A4 proportions (794px x 1123px at 96 DPI)
+        clonedEl.style.width = '794px';
+        clonedEl.style.minWidth = '794px';
+        clonedEl.style.maxWidth = '794px';
+        clonedEl.style.minHeight = '1120px';
+        clonedEl.style.boxShadow = 'none';
+        clonedEl.style.border = 'none';
+        clonedEl.style.borderRadius = '0';
+        clonedEl.style.direction = 'rtl';
+        clonedEl.style.letterSpacing = '0px';
+        clonedEl.style.fontFeatureSettings = '"liga" 1, "calt" 1';
+
+        // Ensure zero letter-spacing on all Arabic text inside the clone to prevent disconnected letters
+        const allDescendants = clonedEl.querySelectorAll('*');
+        allDescendants.forEach((node) => {
+          const htmlNode = node as HTMLElement;
+          if (htmlNode.style) {
+            if (
+              !htmlNode.classList.contains('font-mono') &&
+              !htmlNode.classList.contains('font-serif')
+            ) {
+              htmlNode.style.letterSpacing = '0px';
+            }
+          }
+        });
+      }
+    },
   });
 
   const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -60,28 +95,22 @@ export async function exportReceiptToPDF(
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
+    compress: true,
   });
 
-  const pdfWidth = pdf.internal.pageSize.getWidth(); // 210
-  const pdfHeight = pdf.internal.pageSize.getHeight(); // 297
+  const canvasRatio = canvas.width / canvas.height;
 
-  const canvasWidth = canvas.width;
-  const canvasHeight = canvas.height;
-
-  // Calculate scaled dimensions to fit neatly on page
-  const ratio = canvasWidth / canvasHeight;
-  let printWidth = pdfWidth - 10; // 5mm margin on each side
-  let printHeight = printWidth / ratio;
-
-  if (printHeight > pdfHeight - 10) {
-    printHeight = pdfHeight - 10;
-    printWidth = printHeight * ratio;
+  // If the document is unusually tall (e.g. multiple installments history shown), fit by height
+  if (canvasRatio < 0.62) {
+    const printHeight = 297;
+    const printWidth = printHeight * canvasRatio;
+    const xOffset = (210 - printWidth) / 2;
+    pdf.addImage(imgData, 'JPEG', xOffset, 0, printWidth, printHeight, undefined, 'FAST');
+  } else {
+    // Standard A4 sheet: full bleed onto 210x297mm
+    // The receipt container's internal padding (p-6/p-8) provides the natural 8-10mm margin from the paper edges
+    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
   }
 
-  const xOffset = (pdfWidth - printWidth) / 2;
-  const yOffset = 5;
-
-  pdf.addImage(imgData, 'JPEG', xOffset, yOffset, printWidth, printHeight, undefined, 'FAST');
   pdf.save(filename);
 }
-

@@ -93,7 +93,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <CheckCircle2 className="w-3.5 h-3.5 text-blue-300" />
             <span>نظام سند برو لإدارة سندات القبض المالية</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold font-amiri tracking-wide">
+          <h2 className="text-2xl sm:text-3xl font-bold font-amiri">
             مرحباً بك في لوحة تحكم {company.name || 'سند برو'}
           </h2>
           <p className="text-blue-100/80 text-sm max-w-xl leading-relaxed">

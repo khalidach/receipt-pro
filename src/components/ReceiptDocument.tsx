@@ -19,11 +19,46 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
   const isCheque = receipt.paymentMethod === "cheque";
   const isBankTransfer = receipt.paymentMethod === "bank_transfer";
 
+  // Splits purpose text into 3 distinct lines that sit directly on notebook ruled lines
+  const formatPurposeLines = (text?: string): string[] => {
+    if (!text || !text.trim()) {
+      return ["", "", ""];
+    }
+    const paragraphs = text.split("\n").filter((p) => p.trim().length > 0);
+    const lines: string[] = [];
+    const maxChars = 75;
+
+    for (const para of paragraphs) {
+      if (para.length <= maxChars) {
+        lines.push(para);
+      } else {
+        const words = para.split(" ");
+        let current = "";
+        for (const word of words) {
+          if ((current + " " + word).trim().length <= maxChars) {
+            current = (current + " " + word).trim();
+          } else {
+            if (current) lines.push(current);
+            current = word;
+          }
+        }
+        if (current) lines.push(current);
+      }
+    }
+
+    while (lines.length < 3) {
+      lines.push("");
+    }
+    return lines.slice(0, 3);
+  };
+
+  const purposeLines = formatPurposeLines(receipt.purpose);
+
   return (
     <div
       id="receipt-print-area"
       dir="rtl"
-      className="receipt-sheet bg-white text-slate-900 mx-auto w-full max-w-[800px] p-8 sm:p-12 shadow-lg border border-slate-200 print:shadow-none print:border-none print:p-8 font-tajawal select-none"
+      className="receipt-sheet bg-white text-slate-900 mx-auto w-full max-w-[800px] p-6 sm:p-8 shadow-lg border border-slate-200 print:shadow-none print:border-none print:p-6 font-tajawal select-none flex flex-col justify-between"
       style={{
         minHeight: "1050px",
         boxSizing: "border-box",
@@ -88,40 +123,36 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
       </div>
 
       {/* Main Divider Line across the receipt */}
-      <div className="w-full border-b-2 border-slate-800 mb-8 mt-2" />
+      <div className="w-full border-b-2 border-slate-800 mb-5 mt-2" />
 
       {/* ================= SECTION 1: RECIPIENT INFO (بيانات المستلم) ================= */}
-      <div className="relative border-2 border-slate-800 rounded-2xl p-6 mb-7 bg-white">
+      <div className="relative border-2 border-slate-800 rounded-2xl p-5 mb-4 bg-white">
         {/* Border Title Badge */}
-        <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg tracking-wide">
+        <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg">
           بيانات المستلم
         </div>
 
         {/* Line 1: وصلنا من السيد / السادة */}
-        <div className="flex items-baseline gap-3 mb-5">
-          <span className="font-bold text-slate-900 text-base sm:text-lg whitespace-nowrap">
+        <div className="flex items-center gap-3 mb-3.5">
+          <span className="font-bold text-slate-900 text-base sm:text-lg whitespace-nowrap shrink-0">
             وصلنا من السيد / السادة :
           </span>
-          <div className="flex-1 relative pb-1">
-            <div className="text-base sm:text-lg font-bold text-slate-800 px-2 font-tajawal">
-              {receipt.clientName ||
-                "........................................................"}
-            </div>
-            <div className="w-full border-b-2 border-dotted border-slate-400 absolute bottom-0 left-0 right-0" />
+          <div className="flex-1 border-b-2 border-dotted border-slate-400 pb-1 px-2 min-h-[30px] flex items-center">
+            <span className="text-base sm:text-lg font-bold text-slate-900 font-tajawal">
+              {receipt.clientName || ""}
+            </span>
           </div>
         </div>
 
         {/* Line 2: مبلغ وقدره */}
-        <div className="flex items-baseline gap-3">
-          <span className="font-bold text-slate-900 text-base sm:text-lg whitespace-nowrap">
+        <div className="flex items-center gap-3">
+          <span className="font-bold text-slate-900 text-base sm:text-lg whitespace-nowrap shrink-0">
             مبلغ وقدره :
           </span>
-          <div className="flex-1 relative pb-1">
-            <div className="text-base sm:text-lg font-semibold text-slate-800 px-2 leading-relaxed">
-              {receipt.amountInWords ||
-                "........................................................"}
-            </div>
-            <div className="w-full border-b-2 border-dotted border-slate-400 absolute bottom-0 left-0 right-0" />
+          <div className="flex-1 border-b-2 border-dotted border-slate-400 pb-1 px-2 min-h-[30px] flex items-center">
+            <span className="text-base sm:text-lg font-semibold text-slate-800 leading-normal font-tajawal">
+              {receipt.amountInWords || ""}
+            </span>
           </div>
         </div>
       </div>
@@ -130,23 +161,23 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
       {receipt.hasTravelers &&
         receipt.travelers &&
         receipt.travelers.length > 0 && (
-          <div className="relative border-2 border-slate-800 rounded-2xl p-5 mb-7 bg-white">
+          <div className="relative border-2 border-slate-800 rounded-2xl p-4 mb-4 bg-white">
             {/* Border Title Badge */}
-            <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg tracking-wide flex items-center gap-2">
+            <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
               <span>بيانات المسافرين</span>
               <span className="text-xs font-mono font-medium text-slate-500">
                 ({receipt.travelers.length} مسافر)
               </span>
             </div>
 
-            <div className="pt-2">
-              <div className="flex flex-wrap items-center gap-2.5">
+            <div className="pt-1.5">
+              <div className="flex flex-wrap items-center gap-2">
                 {receipt.travelers.map((traveler, idx) => (
                   <div
                     key={idx}
-                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 text-sm sm:text-base font-bold shadow-xs"
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded-xl border border-slate-300 bg-slate-50/80 text-slate-900 text-xs sm:text-sm font-bold shadow-xs"
                   >
-                    <span className="w-5 h-5 rounded-full bg-slate-800 text-white text-xs font-mono flex items-center justify-center font-bold">
+                    <span className="w-4 h-4 rounded-full bg-slate-800 text-white text-[10px] font-mono flex items-center justify-center font-bold">
                       {idx + 1}
                     </span>
                     <span>{traveler}</span>
@@ -159,11 +190,11 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
 
       {/* ================= SECTION 2: PAYMENT METHOD & FINANCIAL ACCOUNT ================= */}
       {/* Right Column: طريقة الدفع (md:col-span-5) | Left Column: الحساب المالي (md:col-span-7) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 mb-7">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
         {/* Right Column (First in RTL): طريقة الدفع (md:col-span-5) - Only selected method shown */}
-        <div className="relative border-2 border-slate-800 rounded-2xl p-5 bg-white md:col-span-5 flex flex-col justify-between">
+        <div className="relative border-2 border-slate-800 rounded-2xl p-4 bg-white md:col-span-5 flex flex-col justify-between">
           {/* Border Title Badge */}
-          <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg tracking-wide">
+          <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg">
             طريقة الدفع
           </div>
 
@@ -394,18 +425,18 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
         </div>
 
         {/* Left Column (Second in RTL): الحساب المالي (md:col-span-7) - Larger Box */}
-        <div className="relative border-2 border-slate-800 rounded-2xl p-5 sm:p-6 bg-white md:col-span-7 flex flex-col justify-between">
+        <div className="relative border-2 border-slate-800 rounded-2xl p-4 sm:p-5 bg-white md:col-span-7 flex flex-col justify-between">
           {/* Border Title Badge */}
-          <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg tracking-wide">
+          <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg">
             الحساب المالي
           </div>
 
-          <div className="space-y-3 pt-2">
+          <div className="space-y-2.5 pt-1.5">
             {/* If total contract value was provided, show full contract breakdown */}
             {receipt.totalAmount && receipt.totalAmount > 0 ? (
               <>
                 {/* 1. إجمالي العقد / المطلوب */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2 text-slate-800">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 text-slate-800">
                   <span className="font-bold text-sm sm:text-base">
                     إجمالي العقد / المطلوب:
                   </span>
@@ -423,7 +454,7 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
                 {/* 2. المبلغ المتبقي في الدفعة الأخيرة (اختياري في السند الجديد، وإلزامي في سند القسط) */}
                 {receipt.previousRemainingAmount !== undefined &&
                   receipt.previousRemainingAmount !== null && (
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 text-slate-800">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 text-slate-800">
                       <span className="font-bold text-sm sm:text-base">
                         المبلغ المتبقي في الدفعة الأخيرة:
                       </span>
@@ -440,7 +471,7 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
                   )}
 
                 {/* 3. المبلغ الحالي */}
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2.5 pt-0.5">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2 pt-0.5">
                   <span className="font-bold text-slate-900 text-base sm:text-lg">
                     المبلغ الحالي:
                   </span>
@@ -461,7 +492,7 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
                 </div>
 
                 {/* 4. المبلغ المتبقي */}
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center justify-between pt-0.5">
                   <span className="font-bold text-sm sm:text-base text-slate-900">
                     المبلغ المتبقي:
                   </span>
@@ -482,7 +513,7 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
               </>
             ) : (
               /* If NO total contract was entered: Show ONLY المبلغ الحالي (No total, No remaining balance!) */
-              <div className="my-auto py-4 text-center space-y-2">
+              <div className="my-auto py-3 text-center space-y-1.5">
                 <span className="font-bold text-slate-800 text-base sm:text-lg block">
                   المبلغ الحالي المقبوض:
                 </span>
@@ -510,71 +541,63 @@ export const ReceiptDocument: React.FC<ReceiptDocumentProps> = ({
       </div>
 
       {/* ================= SECTION 3: PURPOSE (وذلك مقابل) ================= */}
-      <div className="relative border-2 border-slate-800 rounded-2xl p-6 mb-12 bg-white">
+      <div className="relative border-2 border-slate-800 rounded-2xl p-4 sm:p-5 mb-5 bg-white">
         {/* Border Title Badge */}
-        <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg tracking-wide">
+        <div className="absolute -top-3.5 right-6 px-3 bg-white font-bold text-slate-900 text-base sm:text-lg">
           وذلك مقابل
         </div>
 
-        {/* Lined paper lines with purpose text */}
-        <div className="pt-2 relative min-h-[110px] flex flex-col justify-between">
-          <div className="relative z-10 text-base sm:text-lg font-medium text-slate-900 leading-9 font-tajawal px-1">
-            {receipt.purpose ||
-              "................................................................................................................................................................"}
-          </div>
-
-          {/* 4 horizontal notebook ruled lines in the background */}
-          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pt-7 pb-2">
-            <div className="border-b border-slate-300 w-full" />
-            <div className="border-b border-slate-300 w-full" />
-            <div className="border-b border-slate-300 w-full" />
-            <div className="border-b border-slate-300 w-full" />
-          </div>
+        {/* 3 Dedicated Ruled Lines with Text locked directly onto each line */}
+        <div className="pt-2 space-y-2">
+          {purposeLines.map((lineText, idx) => (
+            <div
+              key={idx}
+              className="border-b border-slate-300 min-h-[30px] pb-1 px-1 flex items-end"
+            >
+              <span className="text-base sm:text-lg font-medium text-slate-900 font-tajawal leading-normal">
+                {lineText}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* ================= FOOTER: SIGNATURES & STAMP ================= */}
-      <div className="grid grid-cols-2 gap-8 items-end pt-4 pb-2">
+      <div className="grid grid-cols-2 gap-8 items-end pt-2 pb-1 mt-auto">
         {/* Left Column: الختم الرسمي */}
         <div className="text-center flex flex-col items-center">
-          <div className="h-28 flex items-center justify-center relative w-full mb-1">
+          <div className="h-20 sm:h-22 flex items-center justify-center relative w-full mb-1">
             {receipt.stampImage || company.stampUrl ? (
               <img
                 src={receipt.stampImage || company.stampUrl}
                 alt="الختم الرسمي"
-                className="max-h-24 max-w-full object-contain filter drop-shadow opacity-95 transform -rotate-3"
+                className="max-h-20 max-w-full object-contain filter drop-shadow opacity-95 transform -rotate-3"
               />
             ) : (
-              // <div className="w-20 h-20 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-slate-300 text-xs">
-              //   {/* موضع الختم */}
-              // </div>
               <div>{/* موضع الختم */}</div>
             )}
           </div>
-          <div className="w-48 sm:w-60 border-b-2 border-slate-800 mb-2" />
-          <h3 className="text-lg sm:text-xl font-bold font-amiri text-slate-900">
+          <div className="w-48 sm:w-56 border-b-2 border-slate-800 mb-1.5" />
+          <h3 className="text-base sm:text-lg font-bold font-amiri text-slate-900">
             الختم الرسمي
           </h3>
         </div>
 
         {/* Right Column: المحاسب / المستلم */}
         <div className="text-center flex flex-col items-center">
-          <div className="h-28 flex items-center justify-center relative w-full mb-1">
+          <div className="h-20 sm:h-22 flex items-center justify-center relative w-full mb-1">
             {receipt.signatureImage ? (
               <img
                 src={receipt.signatureImage}
                 alt="توقيع المستلم"
-                className="max-h-24 max-w-full object-contain filter drop-shadow"
+                className="max-h-20 max-w-full object-contain filter drop-shadow"
               />
             ) : (
-              // <div className="w-32 h-16 border border-dashed border-slate-200 rounded flex items-center justify-center text-slate-300 text-xs">
-              //   موضع التوقيع
-              // </div>
               <div>{/* موضع التوقيع */}</div>
             )}
           </div>
-          <div className="w-48 sm:w-60 border-b-2 border-slate-800 mb-2" />
-          <h3 className="text-lg sm:text-xl font-bold font-amiri text-slate-900">
+          <div className="w-48 sm:w-56 border-b-2 border-slate-800 mb-1.5" />
+          <h3 className="text-base sm:text-lg font-bold font-amiri text-slate-900">
             المحاسب / المستلم
           </h3>
         </div>
