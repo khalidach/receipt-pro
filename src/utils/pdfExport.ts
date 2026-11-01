@@ -24,25 +24,40 @@ export async function printReceipt(): Promise<void> {
 }
 
 /**
- * Exports the receipt element as a crisp, high-resolution A4 PDF with exact RTL shaping and balanced margins
- * Runs identically in both Browser and Electron
+ * Exports the receipt element as a crisp, high-resolution A4 PDF.
+ * In Electron: Uses Chromium's native vector printToPDF (100% crisp, vector text, zero clipping, exact Arabic layout).
+ * In Browser: High-definition jsPDF + html2canvas rasterizer fallback.
  */
 export async function exportReceiptToPDF(
   elementId: string = 'receipt-print-area',
   filename: string = 'سند_قبض.pdf'
 ): Promise<void> {
+  // 1. If running inside Electron: Use the native Chromium vector PDF engine
+  // This produces genuine vector PDF, selectable Arabic text, and razor-sharp graphics at any zoom level
+  if (window.electronAPI?.isElectron && window.electronAPI?.printToPDF) {
+    const res = await window.electronAPI.printToPDF(filename);
+    if (res.canceled) {
+      return;
+    }
+    if (!res.success) {
+      throw new Error(res.error || 'فشل في إنشاء ملف PDF عالي الدقة');
+    }
+    return;
+  }
+
+  // 2. Fallback for Web Browser environment
   const element = document.getElementById(elementId);
   if (!element) {
     throw new Error(`Element with id "${elementId}" not found`);
   }
 
-  // 1. Ensure all custom fonts (Amiri, Tajawal, Cairo) are fully loaded and layout settled
+  // Ensure all custom fonts (Amiri, Tajawal, Cairo) are fully loaded and layout settled
   if (document.fonts) {
     await document.fonts.ready;
   }
   await new Promise((resolve) => setTimeout(resolve, 80));
 
-  // 2. Capture canvas with 3x scale for ultra crisp text and Arabic glyphs
+  // Capture canvas with 3x scale for ultra crisp text and Arabic glyphs
   const canvas = await html2canvas(element, {
     scale: 3,
     useCORS: true,
@@ -101,20 +116,17 @@ export async function exportReceiptToPDF(
     pdf.addImage(imgData, 'JPEG', xOffset, 0, printWidth, printHeight, undefined, 'FAST');
   } else {
     // Standard A4 sheet: full bleed onto 210x297mm
-    // The receipt container's internal padding (p-6/p-8) provides the natural 8-10mm margin from the paper edges
     pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
   }
 
-  // 3. Save PDF
+  // Save PDF
   if (window.electronAPI?.savePDFBuffer) {
-    // Native Electron Save Dialog with exact high-res PDF data
     const dataUri = pdf.output('datauristring');
     const res = await window.electronAPI.savePDFBuffer(dataUri, filename);
     if (!res.success && !res.canceled) {
       throw new Error(res.error || 'Failed to save PDF');
     }
   } else {
-    // Standard Browser Download
     pdf.save(filename);
   }
 }

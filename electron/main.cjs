@@ -132,34 +132,33 @@ ipcMain.handle('save-pdf-buffer', async (event, { base64Data, filename }) => {
   }
 });
 
-// IPC Handler: Print to PDF (Vector quality fallback)
+// IPC Handler: Print to PDF (Vector native quality)
 ipcMain.handle('print-to-pdf', async (event, filename) => {
-  if (!mainWindow) return false;
+  if (!mainWindow) return { success: false, error: 'No active window' };
   try {
     const pdfData = await mainWindow.webContents.printToPDF({
       pageSize: 'A4',
       printBackground: true,
+      preferCSSPageSize: true,
       margins: {
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0,
+        marginType: 'none',
       },
     });
 
-    const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
       title: 'حفظ سند القبض بصيغة PDF',
       defaultPath: filename || 'سند_قبض.pdf',
       filters: [{ name: 'PDF Documents', extensions: ['pdf'] }],
     });
 
-    if (filePath) {
-      fs.writeFileSync(filePath, pdfData);
-      return { success: true, filePath };
+    if (canceled || !filePath) {
+      return { success: false, canceled: true };
     }
-    return { success: false, canceled: true };
+
+    fs.writeFileSync(filePath, pdfData);
+    return { success: true, filePath };
   } catch (error) {
-    console.error('Failed to generate PDF:', error);
+    console.error('Failed to generate native PDF:', error);
     return { success: false, error: error.message };
   }
 });

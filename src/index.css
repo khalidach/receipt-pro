@@ -10,9 +10,14 @@
 
 /* Custom Print Rules for crisp high-precision vector receipt */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
   html, body {
     width: 210mm !important;
-    height: 297mm !important;
+    min-height: 297mm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
@@ -20,6 +25,11 @@
     print-color-adjust: exact !important;
   }
 
+  /* Hide app navigation, main page, and footer during print */
+  nav,
+  header,
+  main,
+  footer,
   .no-print {
     display: none !important;
   }
@@ -56,9 +66,16 @@
   .receipt-sheet {
     box-shadow: none !important;
     border: none !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 10mm 12mm !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    min-height: 0 !important;
+    padding: 6mm 10mm !important;
     margin: 0 auto !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
   }
 }
