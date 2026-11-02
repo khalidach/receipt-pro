@@ -87,10 +87,10 @@ async function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Initialize SQLite database
   try {
-    database.initDatabase(app.getPath('userData'));
+    await database.initDatabase(app.getPath('userData'));
   } catch (err) {
     console.error('[SQLite] Initialization failed:', err);
   }

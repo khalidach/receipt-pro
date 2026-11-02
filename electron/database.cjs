@@ -1,15 +1,33 @@
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
+let SQL = null;
 let db = null;
 let currentDbPath = '';
 
 /**
- * Initialize the SQLite database
+ * Persist the in-memory SQLite database to disk
  */
-function initDatabase(userDataPath) {
+function persistToDisk() {
+  if (!db || !currentDbPath) return;
+  try {
+    const data = db.export();
+    fs.writeFileSync(currentDbPath, Buffer.from(data));
+  } catch (err) {
+    console.error('[SQLite] Failed to persist database to disk:', err);
+  }
+}
+
+/**
+ * Initialize the SQLite database using sql.js (WebAssembly SQLite)
+ */
+async function initDatabase(userDataPath) {
   if (db) return db;
+
+  if (!SQL) {
+    const initSqlJs = require('sql.js/dist/sql-wasm-inline.js');
+    SQL = await initSqlJs();
+  }
 
   if (!fs.existsSync(userDataPath)) {
     fs.mkdirSync(userDataPath, { recursive: true });
@@ -18,15 +36,20 @@ function initDatabase(userDataPath) {
   currentDbPath = path.join(userDataPath, 'receipts.db');
   console.log('[SQLite] Initializing database at:', currentDbPath);
 
-  db = new Database(currentDbPath);
-
-  // High performance & crash resilience
-  db.pragma('journal_mode = WAL');
-  db.pragma('synchronous = NORMAL');
-  db.pragma('foreign_keys = ON');
+  if (fs.existsSync(currentDbPath)) {
+    try {
+      const fileBuffer = fs.readFileSync(currentDbPath);
+      db = new SQL.Database(fileBuffer);
+    } catch (e) {
+      console.warn('[SQLite] Failed to load existing database file, creating fresh one:', e);
+      db = new SQL.Database();
+    }
+  } else {
+    db = new SQL.Database();
+  }
 
   // Create tables
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -53,6 +76,7 @@ function initDatabase(userDataPath) {
     CREATE INDEX IF NOT EXISTS idx_receipts_client ON receipts(client_name);
   `);
 
+  persistToDisk();
   console.log('[SQLite] Tables and indexes verified successfully.');
   return db;
 }
@@ -64,23 +88,30 @@ function getAllData() {
   if (!db) throw new Error('Database not initialized');
 
   // Receipts
-  const rows = db.prepare(`
-    SELECT data FROM receipts ORDER BY date DESC, created_at DESC
-  `).all();
-  const receipts = rows.map(r => {
-    try {
-      return JSON.parse(r.data);
-    } catch {
-      return null;
+  const receiptsRes = db.exec(`SELECT data FROM receipts ORDER BY date DESC, created_at DESC`);
+  const receipts = [];
+  if (receiptsRes.length > 0 && receiptsRes[0].values) {
+    for (const row of receiptsRes[0].values) {
+      try {
+        receipts.push(JSON.parse(row[0]));
+      } catch {}
     }
-  }).filter(Boolean);
+  }
 
   // Settings
-  const companyRow = db.prepare(`SELECT value FROM settings WHERE key = 'company_profile'`).get();
-  const company = companyRow ? JSON.parse(companyRow.value) : null;
+  let company = null;
+  const companyRes = db.exec(`SELECT value FROM settings WHERE key = 'company_profile'`);
+  if (companyRes.length > 0 && companyRes[0].values && companyRes[0].values.length > 0) {
+    try {
+      company = JSON.parse(companyRes[0].values[0][0]);
+    } catch {}
+  }
 
-  const lastNumRow = db.prepare(`SELECT value FROM settings WHERE key = 'last_receipt_num'`).get();
-  const lastReceiptNum = lastNumRow ? lastNumRow.value : null;
+  let lastReceiptNum = null;
+  const lastNumRes = db.exec(`SELECT value FROM settings WHERE key = 'last_receipt_num'`);
+  if (lastNumRes.length > 0 && lastNumRes[0].values && lastNumRes[0].values.length > 0) {
+    lastReceiptNum = lastNumRes[0].values[0][0];
+  }
 
   return {
     receipts,
@@ -97,36 +128,41 @@ function saveReceipts(receipts) {
   if (!db) throw new Error('Database not initialized');
   if (!Array.isArray(receipts)) return false;
 
-  const saveTx = db.transaction((items) => {
-    db.prepare('DELETE FROM receipts').run();
+  db.run('BEGIN TRANSACTION;');
+  try {
+    db.run('DELETE FROM receipts;');
 
-    const insert = db.prepare(`
+    const stmt = db.prepare(`
       INSERT INTO receipts (
         id, receipt_number, date, client_name, total_amount, paid_amount,
         remaining_amount, payment_method, parent_receipt_id, created_at, updated_at, data
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    for (const r of items) {
-      insert.run(
-        r.id,
+    for (const r of receipts) {
+      stmt.run([
+        r.id || '',
         r.receiptNumber || '',
         r.date || '',
         r.clientName || '',
-        r.totalAmount ?? null,
-        r.paidAmount || 0,
-        r.remainingAmount ?? null,
+        r.totalAmount !== undefined && r.totalAmount !== null ? Number(r.totalAmount) : null,
+        r.paidAmount !== undefined && r.paidAmount !== null ? Number(r.paidAmount) : 0,
+        r.remainingAmount !== undefined && r.remainingAmount !== null ? Number(r.remainingAmount) : null,
         r.paymentMethod || 'cash',
         r.parentReceiptId || null,
         r.createdAt || new Date().toISOString(),
         r.updatedAt || new Date().toISOString(),
         JSON.stringify(r)
-      );
+      ]);
     }
-  });
-
-  saveTx(receipts);
-  return true;
+    stmt.free();
+    db.run('COMMIT;');
+    persistToDisk();
+    return true;
+  } catch (err) {
+    db.run('ROLLBACK;');
+    throw err;
+  }
 }
 
 /**
@@ -134,12 +170,14 @@ function saveReceipts(receipts) {
  */
 function saveCompanyProfile(profile) {
   if (!db) throw new Error('Database not initialized');
-  const upsert = db.prepare(`
+  const stmt = db.prepare(`
     INSERT INTO settings (key, value)
     VALUES ('company_profile', ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value
   `);
-  upsert.run(JSON.stringify(profile));
+  stmt.run([JSON.stringify(profile)]);
+  stmt.free();
+  persistToDisk();
   return true;
 }
 
@@ -156,7 +194,8 @@ async function backupDatabase(destPath) {
   }
 
   // Native SQLite backup for .db / .sqlite files
-  await db.backup(destPath);
+  const data = db.export();
+  fs.writeFileSync(destPath, Buffer.from(data));
   return { success: true, filePath: destPath };
 }
 
@@ -184,15 +223,30 @@ function restoreDatabase(sourcePath) {
   }
 
   // Restore from another SQLite DB
-  const tempDb = new Database(sourcePath, { readonly: true });
-  const rows = tempDb.prepare(`SELECT data FROM receipts`).all();
-  const importedReceipts = rows.map(r => JSON.parse(r.data)).filter(Boolean);
+  const backupBuffer = fs.readFileSync(sourcePath);
+  const tempDb = new SQL.Database(backupBuffer);
 
-  const companyRow = tempDb.prepare(`SELECT value FROM settings WHERE key = 'company_profile'`).get();
+  const res = tempDb.exec(`SELECT data FROM receipts`);
+  const importedReceipts = [];
+  if (res.length > 0 && res[0].values) {
+    for (const row of res[0].values) {
+      try {
+        importedReceipts.push(JSON.parse(row[0]));
+      } catch {}
+    }
+  }
+
+  const compRes = tempDb.exec(`SELECT value FROM settings WHERE key = 'company_profile'`);
+  let compProfile = null;
+  if (compRes.length > 0 && compRes[0].values && compRes[0].values.length > 0) {
+    try {
+      compProfile = JSON.parse(compRes[0].values[0][0]);
+    } catch {}
+  }
   tempDb.close();
 
-  if (companyRow) {
-    saveCompanyProfile(JSON.parse(companyRow.value));
+  if (compProfile) {
+    saveCompanyProfile(compProfile);
   }
   saveReceipts(importedReceipts);
 
@@ -211,8 +265,10 @@ function getDatabaseInfo() {
       sizeBytes = fs.statSync(currentDbPath).size;
     }
     if (db) {
-      const countRow = db.prepare('SELECT COUNT(*) as count FROM receipts').get();
-      receiptCount = countRow ? countRow.count : 0;
+      const res = db.exec('SELECT COUNT(*) as count FROM receipts');
+      if (res.length > 0 && res[0].values && res[0].values.length > 0) {
+        receiptCount = res[0].values[0][0];
+      }
     }
   } catch (err) {
     console.error('Failed to get database stats:', err);
