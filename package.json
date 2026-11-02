@@ -20,6 +20,10 @@
     "directories": {
       "output": "release"
     },
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
     "files": [
       "dist/**/*",
       "electron/**/*",
@@ -40,6 +44,7 @@
     }
   },
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
@@ -52,6 +57,7 @@
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.13.4",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

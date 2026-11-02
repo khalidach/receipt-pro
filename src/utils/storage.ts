@@ -1,5 +1,6 @@
 import { Receipt, CompanyProfile, PaymentRecord } from "../types/receipt";
 import { tafqeetDirham } from "./tafqeet";
+import "../types/electron.d.ts";
 
 const STORAGE_KEYS = {
   RECEIPTS: "ar_receipt_pro_receipts",
@@ -181,6 +182,13 @@ export function saveReceipts(receipts: Receipt[]): void {
   } catch (error) {
     console.error("Failed to save receipts:", error);
   }
+
+  // Persist directly to SQLite
+  if (typeof window !== "undefined" && window.electronAPI?.db?.saveReceipts) {
+    window.electronAPI.db.saveReceipts(receipts).catch((err: any) => {
+      console.error("[SQLite] Failed to persist receipts to SQLite:", err);
+    });
+  }
 }
 
 export function getCompanyProfile(): CompanyProfile {
@@ -206,6 +214,149 @@ export function saveCompanyProfile(profile: CompanyProfile): void {
   } catch (error) {
     console.error("Failed to save company profile:", error);
   }
+
+  // Persist directly to SQLite
+  if (typeof window !== "undefined" && window.electronAPI?.db?.saveCompanyProfile) {
+    window.electronAPI.db.saveCompanyProfile(profile).catch((err: any) => {
+      console.error("[SQLite] Failed to persist company profile to SQLite:", err);
+    });
+  }
+}
+
+/**
+ * Initialize storage from SQLite database on app start
+ * Automatically migrates existing localStorage receipts to SQLite if SQLite is fresh.
+ */
+export async function initStorageFromSQLite(): Promise<{
+  receipts: Receipt[];
+  company: CompanyProfile;
+}> {
+  if (typeof window !== "undefined" && window.electronAPI?.db) {
+    try {
+      const data = await window.electronAPI.db.getAll();
+
+      // If SQLite already has receipts, load and cache them
+      if (data && data.receipts && data.receipts.length > 0) {
+        const synced = syncReceipts(data.receipts);
+        localStorage.setItem(STORAGE_KEYS.RECEIPTS, JSON.stringify(synced));
+        if (data.company) {
+          localStorage.setItem(
+            STORAGE_KEYS.COMPANY_PROFILE,
+            JSON.stringify(data.company),
+          );
+        }
+        return {
+          receipts: synced,
+          company: data.company || getCompanyProfile(),
+        };
+      }
+
+      // If SQLite has no receipts yet, check if there are existing localStorage records to migrate!
+      const localReceiptsRaw = localStorage.getItem(STORAGE_KEYS.RECEIPTS);
+      if (localReceiptsRaw) {
+        try {
+          const localReceipts = JSON.parse(localReceiptsRaw);
+          if (Array.isArray(localReceipts) && localReceipts.length > 0) {
+            console.log("[SQLite] Migrating existing receipts to SQLite...");
+            await window.electronAPI.db.saveReceipts(localReceipts);
+          }
+        } catch (e) {
+          console.error("[SQLite] Migration error:", e);
+        }
+      }
+
+      const localCompanyRaw = localStorage.getItem(STORAGE_KEYS.COMPANY_PROFILE);
+      if (localCompanyRaw) {
+        try {
+          const localCompany = JSON.parse(localCompanyRaw);
+          if (localCompany && localCompany.name) {
+            console.log("[SQLite] Migrating company profile to SQLite...");
+            await window.electronAPI.db.saveCompanyProfile(localCompany);
+          }
+        } catch (e) {
+          console.error("[SQLite] Migration error:", e);
+        }
+      }
+    } catch (err) {
+      console.error("[SQLite] Failed to initialize from SQLite:", err);
+    }
+  }
+
+  return {
+    receipts: getStoredReceipts(),
+    company: getCompanyProfile(),
+  };
+}
+
+/**
+ * Backup the active SQLite database
+ */
+export async function backupDatabase(): Promise<{
+  success: boolean;
+  filePath?: string;
+  canceled?: boolean;
+  error?: string;
+}> {
+  if (typeof window !== "undefined" && window.electronAPI?.db?.backup) {
+    return window.electronAPI.db.backup();
+  }
+
+  // Web fallback: download JSON
+  try {
+    const receipts = getStoredReceipts();
+    const company = getCompanyProfile();
+    const blob = new Blob([JSON.stringify({ receipts, company }, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `سند_برو_نسخة_احتياطية_${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Restore SQLite database from a selected backup file
+ */
+export async function restoreDatabase(): Promise<{
+  success: boolean;
+  receiptsCount?: number;
+  canceled?: boolean;
+  error?: string;
+}> {
+  if (typeof window !== "undefined" && window.electronAPI?.db?.restore) {
+    const res = await window.electronAPI.db.restore();
+    if (res.success) {
+      await initStorageFromSQLite();
+    }
+    return res;
+  }
+  return { success: false, error: "Only available in Electron desktop app" };
+}
+
+/**
+ * Get SQLite database statistics
+ */
+export async function getDatabaseInfo() {
+  if (typeof window !== "undefined" && window.electronAPI?.db?.getInfo) {
+    return window.electronAPI.db.getInfo();
+  }
+  return null;
+}
+
+/**
+ * Reveal database file in File Explorer
+ */
+export async function openDatabaseFolder() {
+  if (typeof window !== "undefined" && window.electronAPI?.db?.openFolder) {
+    return window.electronAPI.db.openFolder();
+  }
+  return false;
 }
 
 /**

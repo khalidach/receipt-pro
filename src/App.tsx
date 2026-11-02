@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Receipt, CompanyProfile } from './types/receipt';
-import { getStoredReceipts, getCompanyProfile } from './utils/storage';
+import { getStoredReceipts, getCompanyProfile, initStorageFromSQLite } from './utils/storage';
 import { Navbar } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
 import { ReceiptList } from './components/ReceiptList';
@@ -27,7 +27,11 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
+    // Initial sync with SQLite (or localStorage in web)
+    initStorageFromSQLite().then((initialData) => {
+      setReceipts(initialData.receipts);
+      setCompany(initialData.company);
+    });
   }, []);
 
   const handleReceiptSaved = (saved: Receipt) => {
@@ -145,6 +149,7 @@ export const App: React.FC = () => {
         onClose={() => setIsCompanySettingsOpen(false)}
         company={company}
         onUpdate={updated => setCompany(updated)}
+        onReceiptsReload={loadData}
       />
     </div>
   );

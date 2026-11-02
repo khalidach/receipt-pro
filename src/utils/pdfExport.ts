@@ -1,16 +1,6 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-
-declare global {
-  interface Window {
-    electronAPI?: {
-      isElectron: boolean;
-      print: () => Promise<boolean>;
-      printToPDF?: (filename?: string) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>;
-      savePDFBuffer?: (base64Data: string, filename?: string) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>;
-    };
-  }
-}
+import '../types/electron.d.ts';
 
 /**
  * Triggers standard browser / Electron window print dialog

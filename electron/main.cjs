@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const database = require('./database.cjs');
 
 let mainWindow;
 
@@ -81,12 +82,19 @@ async function createWindow() {
 
   // Open external links safely in system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    require('electron').shell.openExternal(url);
+    shell.openExternal(url);
     return { action: 'deny' };
   });
 }
 
 app.whenReady().then(() => {
+  // Initialize SQLite database
+  try {
+    database.initDatabase(app.getPath('userData'));
+  } catch (err) {
+    console.error('[SQLite] Initialization failed:', err);
+  }
+
   createWindow();
 
   app.on('activate', () => {
@@ -162,6 +170,108 @@ ipcMain.handle('print-to-pdf', async (event, filename) => {
     return { success: true, filePath };
   } catch (error) {
     console.error('Failed to generate native PDF:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ==========================================
+// SQLite Database IPC Handlers
+// ==========================================
+
+ipcMain.handle('db:get-all', async () => {
+  try {
+    return database.getAllData();
+  } catch (error) {
+    console.error('[SQLite] db:get-all failed:', error);
+    return { receipts: null, company: null, error: error.message };
+  }
+});
+
+ipcMain.handle('db:save-receipts', async (event, receipts) => {
+  try {
+    return database.saveReceipts(receipts);
+  } catch (error) {
+    console.error('[SQLite] db:save-receipts failed:', error);
+    return false;
+  }
+});
+
+ipcMain.handle('db:save-company', async (event, profile) => {
+  try {
+    return database.saveCompanyProfile(profile);
+  } catch (error) {
+    console.error('[SQLite] db:save-company failed:', error);
+    return false;
+  }
+});
+
+ipcMain.handle('db:get-info', async () => {
+  try {
+    return database.getDatabaseInfo();
+  } catch (error) {
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('db:open-folder', async () => {
+  try {
+    const info = database.getDatabaseInfo();
+    if (info && info.path && fs.existsSync(info.path)) {
+      shell.showItemInFolder(info.path);
+      return true;
+    }
+    shell.openPath(app.getPath('userData'));
+    return true;
+  } catch (error) {
+    console.error('[SQLite] open-folder failed:', error);
+    return false;
+  }
+});
+
+ipcMain.handle('db:backup', async () => {
+  if (!mainWindow) return { success: false, error: 'No main window' };
+  try {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      title: 'تصدير نسخة احتياطية لقاعدة البيانات SQLite',
+      defaultPath: `سند_برو_نسخة_احتياطية_${dateStr}.db`,
+      filters: [
+        { name: 'SQLite Database', extensions: ['db', 'sqlite'] },
+        { name: 'JSON Backup', extensions: ['json'] },
+      ],
+    });
+
+    if (canceled || !filePath) {
+      return { success: false, canceled: true };
+    }
+
+    const result = await database.backupDatabase(filePath);
+    return result;
+  } catch (error) {
+    console.error('[SQLite] db:backup failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('db:restore', async () => {
+  if (!mainWindow) return { success: false, error: 'No main window' };
+  try {
+    const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
+      title: 'استيراد واستعادة قاعدة البيانات',
+      filters: [
+        { name: 'Database / Backup Files', extensions: ['db', 'sqlite', 'json'] },
+      ],
+      properties: ['openFile'],
+    });
+
+    if (canceled || !filePaths || filePaths.length === 0) {
+      return { success: false, canceled: true };
+    }
+
+    const result = database.restoreDatabase(filePaths[0]);
+    return result;
+  } catch (error) {
+    console.error('[SQLite] db:restore failed:', error);
     return { success: false, error: error.message };
   }
 });

@@ -1,7 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CompanyProfile } from '../types/receipt';
-import { saveCompanyProfile } from '../utils/storage';
-import { X, Building2, Upload, Trash2, Check, Stamp } from 'lucide-react';
+import {
+  saveCompanyProfile,
+  backupDatabase,
+  restoreDatabase,
+  getDatabaseInfo,
+  openDatabaseFolder,
+} from '../utils/storage';
+import {
+  X,
+  Building2,
+  Upload,
+  Trash2,
+  Check,
+  Stamp,
+  Database,
+  Download,
+  FolderOpen,
+  RotateCcw,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CompanySettingsModalProps {
@@ -9,6 +26,7 @@ interface CompanySettingsModalProps {
   onClose: () => void;
   company: CompanyProfile;
   onUpdate: (updated: CompanyProfile) => void;
+  onReceiptsReload?: () => void;
 }
 
 export const CompanySettingsModal: React.FC<CompanySettingsModalProps> = ({
@@ -16,10 +34,67 @@ export const CompanySettingsModal: React.FC<CompanySettingsModalProps> = ({
   onClose,
   company,
   onUpdate,
+  onReceiptsReload,
 }) => {
   const [formData, setFormData] = useState<CompanyProfile>(company);
+  const [dbInfo, setDbInfo] = useState<{ path: string; sizeBytes: number; receiptCount: number } | null>(null);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(company);
+      getDatabaseInfo().then((info) => {
+        if (info) setDbInfo(info);
+      });
+    }
+  }, [isOpen, company]);
 
   if (!isOpen) return null;
+
+  const handleBackup = async () => {
+    try {
+      setIsBackingUp(true);
+      const res = await backupDatabase();
+      if (res.success && !res.canceled) {
+        toast.success(res.filePath ? `تم إنشاء النسخة الاحتياطية بنجاح: ${res.filePath}` : 'تم تنزيل النسخة الاحتياطية بنجاح');
+      } else if (res.error) {
+        toast.error(`فشل النسخ الاحتياطي: ${res.error}`);
+      }
+    } catch (err: any) {
+      toast.error(`حدث خطأ أثناء النسخ الاحتياطي: ${err.message}`);
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!window.confirm('هل أنت متأكد من استعادة قاعدة البيانات؟ سيتم استبدال البيانات الحالية بالبيانات المستوردة.')) {
+      return;
+    }
+    try {
+      setIsRestoring(true);
+      const res = await restoreDatabase();
+      if (res.success) {
+        toast.success(`تمت استعادة البيانات بنجاح (${res.receiptsCount || 0} سند)`);
+        if (onReceiptsReload) onReceiptsReload();
+        getDatabaseInfo().then(info => { if (info) setDbInfo(info); });
+      } else if (res.error) {
+        toast.error(`فشل الاستيراد: ${res.error}`);
+      }
+    } catch (err: any) {
+      toast.error(`حدث خطأ أثناء الاستعادة: ${err.message}`);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  const handleOpenFolder = async () => {
+    const success = await openDatabaseFolder();
+    if (!success) {
+      toast.info('ميزة فتح المجلد متاحة فقط داخل تطبيق الديسكتوب');
+    }
+  };
 
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -249,6 +324,60 @@ export const CompanySettingsModal: React.FC<CompanySettingsModalProps> = ({
                 placeholder="الدار البيضاء، المغرب"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 text-sm"
               />
+            </div>
+          </div>
+
+          {/* SQLite Database & Backup Center */}
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-slate-800">
+                <Database className="w-5 h-5 text-emerald-600" />
+                <h4 className="text-sm font-bold">قاعدة البيانات المحلية (SQLite) والنسخ الاحتياطي</h4>
+              </div>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                {dbInfo ? `${dbInfo.receiptCount} سند محفوظ` : 'نشط'}
+              </span>
+            </div>
+
+            {dbInfo?.path && (
+              <div className="text-[11px] font-mono text-slate-500 bg-white border border-slate-200 rounded-lg p-2 overflow-x-auto select-all">
+                مسار القاعدة: {dbInfo.path}
+              </div>
+            )}
+
+            <p className="text-xs text-slate-500 leading-relaxed">
+              تُحفظ كافة سندات القبض وبيانات الشركة محلياً في قاعدة بيانات SQLite آمنة فائقة السرعة على جهازك. يمكنك أخذ نسخة احتياطية لحفظها في فلاشة USB أو استعادتها في أي وقت.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleBackup}
+                disabled={isBackingUp}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                <span>{isBackingUp ? 'جاري التصدير...' : 'تصدير نسخة احتياطية (.db)'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRestore}
+                disabled={isRestoring}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
+              >
+                <RotateCcw className="w-4 h-4 text-blue-600" />
+                <span>{isRestoring ? 'جاري الاستيراد...' : 'استيراد واستعادة'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenFolder}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-sm"
+              >
+                <FolderOpen className="w-4 h-4 text-amber-600" />
+                <span>فتح مجلد البيانات</span>
+              </button>
             </div>
           </div>
 
